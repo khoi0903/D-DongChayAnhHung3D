@@ -5,6 +5,13 @@ using UnityEngine.SceneManagement;
 
 public class S02CaveEventController : MonoBehaviour
 {
+    private const int PreResonanceThreatHP = 9999;
+    private const int PreResonanceThreatDamage = 9999;
+    private const int ResonanceEnemyHP = 48;
+    private const int ResonanceEnemyDamage = 10;
+    private const float ResonanceEnemyMoveSpeed = 2.85f;
+    private const float ResonanceEnemyAttackCooldown = 1.6f;
+
     public Transform player;
     public PlayerCombat3D playerCombat;
     public S01WarningTextUI warningUI;
@@ -35,6 +42,7 @@ public class S02CaveEventController : MonoBehaviour
 
     private void Start()
     {
+        CleanupSceneStartRuntimeState();
         FindReferencesIfNeeded();
         EnsureTimeRiftChamberWalkableSurface();
         DisableBlockingTimeRiftVisualColliders();
@@ -170,6 +178,7 @@ public class S02CaveEventController : MonoBehaviour
         }
 
         SetPlayerCombat(true);
+        NormalizeActiveEnemiesForResonance();
         if (cutsceneController == null)
             yield return new WaitForSeconds(4.4f);
 
@@ -231,6 +240,7 @@ public class S02CaveEventController : MonoBehaviour
     private IEnumerator CompleteSequence()
     {
         SetPlayerCombat(false);
+        StopAllPressureEnemiesForEnding();
 
         if (cutsceneController != null)
         {
@@ -251,6 +261,38 @@ public class S02CaveEventController : MonoBehaviour
         {
             Debug.LogWarning("S02 next scene is missing from Build Settings: " + nextSceneName);
         }
+    }
+
+    private void StopAllPressureEnemiesForEnding()
+    {
+        EnemyChase3D[] enemies = FindObjectsByType<EnemyChase3D>(FindObjectsInactive.Exclude);
+        foreach (EnemyChase3D enemy in enemies)
+        {
+            if (enemy == null || !IsS02PressureEnemy(enemy.gameObject))
+                continue;
+
+            enemy.enabled = false;
+
+            Collider[] colliders = enemy.GetComponentsInChildren<Collider>();
+            foreach (Collider enemyCollider in colliders)
+                enemyCollider.enabled = false;
+
+            Rigidbody rigidbody = enemy.GetComponent<Rigidbody>();
+            if (rigidbody != null)
+            {
+                rigidbody.linearVelocity = Vector3.zero;
+                rigidbody.angularVelocity = Vector3.zero;
+                rigidbody.isKinematic = true;
+            }
+        }
+
+        Debug.Log("S02 ending cutscene started. Pressure enemies stopped.");
+    }
+
+    private bool IsS02PressureEnemy(GameObject enemy)
+    {
+        return enemy != null &&
+               (enemy.name.StartsWith("S02_BlackStarEnemy") || enemy.CompareTag("Enemy"));
     }
 
     private void SpawnEnemyAtIndex(int spawnIndex, bool resonancePhase)
@@ -277,7 +319,8 @@ public class S02CaveEventController : MonoBehaviour
         if (health == null)
             health = enemy.AddComponent<EnemyHealth3D>();
 
-        health.maxHP = resonancePhase ? 40 : 9999;
+        health.maxHP = resonancePhase ? ResonanceEnemyHP : PreResonanceThreatHP;
+        health.currentHP = health.maxHP;
 
         EnemyChase3D chase = enemy.GetComponent<EnemyChase3D>();
         if (chase == null)
@@ -288,9 +331,10 @@ public class S02CaveEventController : MonoBehaviour
 
         chase.chaseRange = 120f;
         chase.attackRange = resonancePhase ? 1.7f : 1.35f;
-        chase.moveSpeed = resonancePhase ? 3.4f : 2.8f;
-        chase.damage = resonancePhase ? 14 : 9999;
-        chase.attackCooldown = resonancePhase ? 1.3f : 1f;
+        chase.moveSpeed = resonancePhase ? ResonanceEnemyMoveSpeed : 2.8f;
+        chase.damage = resonancePhase ? ResonanceEnemyDamage : PreResonanceThreatDamage;
+        chase.attackCooldown = resonancePhase ? ResonanceEnemyAttackCooldown : 1f;
+        ForceEnemyAnimation(enemy);
     }
 
     private int GetActivePressureEnemyCount()
@@ -354,6 +398,96 @@ public class S02CaveEventController : MonoBehaviour
         return spawnPoint != null && (player == null || spawnPoint.position.z <= player.position.z - 4f);
     }
 
+    private void NormalizeActiveEnemiesForResonance()
+    {
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        foreach (GameObject enemy in enemies)
+        {
+            if (enemy == null || !enemy.name.StartsWith("S02_BlackStarEnemy"))
+                continue;
+
+            ForceEnemyAnimation(enemy);
+
+            EnemyHealth3D health = enemy.GetComponent<EnemyHealth3D>();
+            if (health == null)
+                health = enemy.AddComponent<EnemyHealth3D>();
+
+            health.maxHP = ResonanceEnemyHP;
+            health.currentHP = ResonanceEnemyHP;
+            health.destroyOnDeath = true;
+
+            EnemyChase3D chase = enemy.GetComponent<EnemyChase3D>();
+            if (chase == null)
+                chase = enemy.AddComponent<EnemyChase3D>();
+
+            if (player != null)
+                chase.target = player;
+
+            chase.chaseRange = 120f;
+            chase.attackRange = 1.7f;
+            chase.moveSpeed = ResonanceEnemyMoveSpeed;
+            chase.damage = ResonanceEnemyDamage;
+            chase.attackCooldown = ResonanceEnemyAttackCooldown;
+        }
+
+        Debug.Log("S02 resonance started. Active BlackStar enemies normalized to " + ResonanceEnemyHP + " HP.");
+    }
+
+    private void ForceEnemyAnimation(GameObject enemy)
+    {
+        if (enemy == null)
+            return;
+
+        EnemyChase3D chase = enemy.GetComponent<EnemyChase3D>();
+        if (chase != null)
+        {
+            chase.ForceVisualAnimation();
+            return;
+        }
+
+        Animator[] animators = enemy.GetComponentsInChildren<Animator>(true);
+        foreach (Animator animator in animators)
+        {
+            if (animator == null)
+                continue;
+
+            animator.enabled = true;
+            animator.applyRootMotion = false;
+            animator.updateMode = AnimatorUpdateMode.Normal;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            animator.speed = 1f;
+
+            if (animator.runtimeAnimatorController != null)
+            {
+                animator.Rebind();
+                animator.Update(0f);
+                animator.Play("Walking", 0, Random.value);
+            }
+        }
+
+        if (animators.Length == 0)
+            Debug.LogWarning("S02 spawned enemy has no child Animator: " + enemy.name, enemy);
+    }
+
+    private void CleanupSceneStartRuntimeState()
+    {
+        EnemyChase3D[] enemies = FindObjectsByType<EnemyChase3D>(FindObjectsInactive.Exclude);
+        foreach (EnemyChase3D enemy in enemies)
+        {
+            if (enemy == null || !enemy.name.StartsWith("S02_BlackStarEnemy"))
+                continue;
+
+            Destroy(enemy.gameObject);
+        }
+
+        EnemySpawner3D[] spawners = FindObjectsByType<EnemySpawner3D>(FindObjectsInactive.Exclude);
+        foreach (EnemySpawner3D spawner in spawners)
+        {
+            if (spawner != null)
+                spawner.enabled = false;
+        }
+    }
+
     private void FindReferencesIfNeeded()
     {
         if (player == null)
@@ -365,6 +499,12 @@ public class S02CaveEventController : MonoBehaviour
 
         if (playerCombat == null && player != null)
             playerCombat = player.GetComponent<PlayerCombat3D>();
+
+        if (playerCombat == null && player != null)
+        {
+            playerCombat = player.gameObject.AddComponent<PlayerCombat3D>();
+            Debug.Log("S02 added missing PlayerCombat3D to Player for resonance combat.");
+        }
 
         if (warningUI == null)
             warningUI = FindAnyObjectByType<S01WarningTextUI>();
@@ -479,11 +619,33 @@ public class S02CaveEventController : MonoBehaviour
 
     private void SetPlayerCombat(bool enabled)
     {
+        FindReferencesIfNeeded();
+
         if (playerCombat == null)
+        {
+            Debug.LogWarning("S02 could not enable resonance combat because PlayerCombat3D is missing.");
             return;
+        }
+
+        if (enabled)
+            ConfigureResonanceCombat();
 
         playerCombat.enabled = enabled;
         Debug.Log(enabled ? "S02 resonance combat enabled." : "S02 resonance combat disabled.");
+    }
+
+    private void ConfigureResonanceCombat()
+    {
+        playerCombat.damage = 24;
+        playerCombat.attackRange = 5.4f;
+        playerCombat.attackAngle = 105f;
+        playerCombat.closeHitRadius = 1.45f;
+        playerCombat.attackCooldown = 0.62f;
+        playerCombat.knockbackForce = 7f;
+        playerCombat.enemyStunDuration = 0.45f;
+
+        if (playerCombat.aimCamera == null)
+            playerCombat.aimCamera = Camera.main;
     }
 
     private void ShowStory(string message, float duration)

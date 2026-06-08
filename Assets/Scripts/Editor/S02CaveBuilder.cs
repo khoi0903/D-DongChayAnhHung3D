@@ -33,13 +33,16 @@ public static class S02CaveBuilder
         TMP_Text warningText = EnsureText(canvas.transform, "WarningText", new Vector2(0.5f, 0.82f), Vector2.zero, new Vector2(1250f, 100f), 31);
         TMP_Text storyText = EnsureText(canvas.transform, "StoryText", new Vector2(0.5f, 0.94f), Vector2.zero, new Vector2(1300f, 90f), 27);
         S01WarningTextUI warningUI = EnsureWarningUI(canvas, warningText, storyText);
+        DeleteDuplicateSceneObjects("InteractionText", interactionText.gameObject);
+        DeleteDuplicateSceneObjects("WarningText", warningText.gameObject);
+        DeleteDuplicateSceneObjects("StoryText", storyText.gameObject);
 
         Transform player = SetupPlayer();
         SetupLighting();
 
         CreateSafetyFloor(root, safetyMat);
         BuildWakeArea(root, floorMat, wallMat, ledgeMat, debrisMat, blueGlowMat);
-        BuildAncientSignsPath(root, floorMat, wallMat, ledgeMat, bronzeMat, blueGlowMat);
+        BuildAncientSignsPath(root, floorMat, wallMat, ledgeMat, bronzeMat, blueGlowMat, warningUI, interactionText, storyText);
         BuildVoicesAndPressurePath(root, floorMat, wallMat, ledgeMat, debrisMat, bronzeMat, blueGlowMat, dangerMat, warningUI);
         GameObject timeRift = BuildTimeRiftChamber(root, floorMat, wallMat, ledgeMat, bronzeMat, blueGlowMat, purpleGlowMat);
 
@@ -73,8 +76,10 @@ public static class S02CaveBuilder
             characterController.enabled = true;
 
         PlayerCombat3D combat = player.GetComponent<PlayerCombat3D>();
-        if (combat != null)
-            combat.enabled = false;
+        if (combat == null)
+            combat = player.AddComponent<PlayerCombat3D>();
+
+        combat.enabled = false;
 
         PlayerController3D controller = player.GetComponent<PlayerController3D>();
         if (controller != null)
@@ -121,7 +126,7 @@ public static class S02CaveBuilder
         CreateArrowOnFloor(root, "WakeArea_Route_Glow", new Vector3(0f, 0.31f, 17f), 0f, glowMat);
     }
 
-    private static void BuildAncientSignsPath(GameObject root, Material floorMat, Material wallMat, Material ledgeMat, Material bronzeMat, Material glowMat)
+    private static void BuildAncientSignsPath(GameObject root, Material floorMat, Material wallMat, Material ledgeMat, Material bronzeMat, Material glowMat, S01WarningTextUI warningUI, TMP_Text interactionText, TMP_Text storyText)
     {
         CreateFloor(root, "AncientSigns_Path_A", new Vector3(0f, 0f, 32f), new Vector3(15f, 0.45f, 24f), floorMat);
         CreateFloor(root, "AncientSigns_Path_B", new Vector3(-6f, 0f, 52f), new Vector3(15f, 0.45f, 24f), floorMat);
@@ -142,10 +147,10 @@ public static class S02CaveBuilder
             CreateGlowCrack(root, "Guiding_Crack_" + (i + 1).ToString("00"), new Vector3(x, 0.32f, z + 2.2f), i % 2 == 0 ? 12f : -16f, glowMat);
         }
 
-        CreateInspectable(root, "Inspect_DongSonSymbol", new Vector3(-7.6f, 1.9f, 34f), new Vector3(0f, 90f, 0f), PrimitiveType.Cylinder, new Vector3(1.55f, 0.08f, 1.55f), bronzeMat,
+        CreateInspectable(root, "Inspect_DongSonSymbol", new Vector3(-7.6f, 1.9f, 34f), new Vector3(0f, 90f, 0f), PrimitiveType.Cylinder, new Vector3(1.55f, 0.08f, 1.55f), bronzeMat, glowMat, warningUI, interactionText, storyText,
             "Nhấn E để kiểm tra hoa văn",
             "Văn An: Hoa văn này giống trống đồng... nhưng sao lại ở dưới lòng thành phố?");
-        CreateInspectable(root, "Inspect_CoLoaStoneMark", new Vector3(12.8f, 1.9f, 74f), new Vector3(0f, -90f, 0f), PrimitiveType.Cylinder, new Vector3(1.8f, 0.08f, 1.8f), bronzeMat,
+        CreateInspectable(root, "Inspect_CoLoaStoneMark", new Vector3(12.8f, 1.9f, 74f), new Vector3(0f, -90f, 0f), PrimitiveType.Cylinder, new Vector3(1.8f, 0.08f, 1.8f), bronzeMat, glowMat, warningUI, interactionText, storyText,
             "Nhấn E để xem ký hiệu Loa Thành",
             "Các vòng khắc nối nhau như tường thành xoắn ốc. Cổ Loa?");
         CreateArrowOnFloor(root, "AncientSigns_Route_Glow_A", new Vector3(-5f, 0.31f, 47f), -18f, glowMat);
@@ -305,7 +310,7 @@ public static class S02CaveBuilder
         warningTrigger.duration = story ? 5.5f : 4f;
     }
 
-    private static void CreateInspectable(GameObject root, string name, Vector3 position, Vector3 rotation, PrimitiveType visualType, Vector3 visualScale, Material visualMaterial, string prompt, string story)
+    private static void CreateInspectable(GameObject root, string name, Vector3 position, Vector3 rotation, PrimitiveType visualType, Vector3 visualScale, Material visualMaterial, Material glowMaterial, S01WarningTextUI warningUI, TMP_Text interactionText, TMP_Text storyText, string prompt, string story)
     {
         GameObject parent = CreateParent(root, name, position, rotation);
         GameObject visual = CreatePrimitive(parent, name + "_Visual", visualType, Vector3.zero, Vector3.zero, visualScale, visualMaterial);
@@ -313,16 +318,25 @@ public static class S02CaveBuilder
         if (visualCollider != null)
             Object.DestroyImmediate(visualCollider);
 
+        GameObject completedGlow = CreatePrimitive(parent, name + "_InteractionGlow", PrimitiveType.Sphere, new Vector3(0f, 0f, 0.12f), Vector3.zero, new Vector3(1.25f, 0.12f, 1.25f), glowMaterial);
+        RemoveCollider(completedGlow);
+        completedGlow.SetActive(false);
+
         GameObject trigger = CreateCube(parent, name + "_Trigger", Vector3.zero, Vector3.zero, new Vector3(3.4f, 2.6f, 3.4f), null);
         BoxCollider collider = trigger.GetComponent<BoxCollider>();
         if (collider != null)
             collider.isTrigger = true;
 
         SimpleInteractPrompt promptScript = trigger.AddComponent<SimpleInteractPrompt>();
+        promptScript.interactionText = interactionText;
+        promptScript.storyText = storyText;
+        promptScript.warningUI = warningUI;
         promptScript.promptMessage = prompt;
         promptScript.storyMessage = story;
         promptScript.storyDuration = 5.5f;
         promptScript.triggerOnce = true;
+        promptScript.highlightRenderer = visual.GetComponent<Renderer>();
+        promptScript.activateOnInteract = completedGlow;
     }
 
     private static Canvas EnsureCanvas()
@@ -670,6 +684,9 @@ public static class S02CaveBuilder
             "S02_TimeRift_Core",
             "S02_TimeRift_Ring",
             "S02_BlackStarEnemy",
+            "S02_CutsceneFade",
+            "S02_CutsceneSkipPrompt",
+            "S02_CutsceneSubtitle",
             "EnemySpawner",
             "EnemySpawnPoint_01",
             "EnemySpawnPoint_02",
@@ -701,10 +718,57 @@ public static class S02CaveBuilder
         };
 
         foreach (string legacyName in legacyNames)
+            DeleteAllSceneObjectsNamed(legacyName);
+
+        DeleteAllSceneObjectsWithPrefix("S02_BlackStarEnemy");
+    }
+
+    private static void DeleteAllSceneObjectsNamed(string objectName)
+    {
+        Transform[] transforms = Resources.FindObjectsOfTypeAll<Transform>();
+        foreach (Transform sceneTransform in transforms)
         {
-            GameObject oldObject = FindSceneObject(legacyName);
-            if (oldObject != null)
-                Object.DestroyImmediate(oldObject);
+            if (sceneTransform == null ||
+                sceneTransform.name != objectName ||
+                !sceneTransform.gameObject.scene.IsValid())
+            {
+                continue;
+            }
+
+            Object.DestroyImmediate(sceneTransform.gameObject);
+        }
+    }
+
+    private static void DeleteAllSceneObjectsWithPrefix(string namePrefix)
+    {
+        Transform[] transforms = Resources.FindObjectsOfTypeAll<Transform>();
+        foreach (Transform sceneTransform in transforms)
+        {
+            if (sceneTransform == null ||
+                !sceneTransform.name.StartsWith(namePrefix) ||
+                !sceneTransform.gameObject.scene.IsValid())
+            {
+                continue;
+            }
+
+            Object.DestroyImmediate(sceneTransform.gameObject);
+        }
+    }
+
+    private static void DeleteDuplicateSceneObjects(string objectName, GameObject keepObject)
+    {
+        Transform[] transforms = Resources.FindObjectsOfTypeAll<Transform>();
+        foreach (Transform sceneTransform in transforms)
+        {
+            if (sceneTransform == null ||
+                sceneTransform.gameObject == keepObject ||
+                sceneTransform.name != objectName ||
+                !sceneTransform.gameObject.scene.IsValid())
+            {
+                continue;
+            }
+
+            Object.DestroyImmediate(sceneTransform.gameObject);
         }
     }
 }

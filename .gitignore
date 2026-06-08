@@ -27,6 +27,8 @@
 *.opendb
 *.VC.db
 sysinfo.txt
+Assets/_Recovery/
+Assets/_Recovery.meta
 
 # OS files
 .DS_Store
