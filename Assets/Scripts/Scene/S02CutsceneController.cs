@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -20,14 +21,17 @@ public class S02CutsceneController : MonoBehaviour
     public KeyCode skipKey = KeyCode.Space;
     public KeyCode alternateSkipKey = KeyCode.Escape;
     public string skipPrompt = "Space / Esc de bo qua";
+    public string introSubtitle = "Văn An tỉnh dậy trong bóng tối dưới lòng thành phố.";
 
     private Image fadeImage;
     private TMP_Text skipPromptText;
+    private TMP_Text subtitleText;
     private Vector3 savedCameraPosition;
     private Quaternion savedCameraRotation;
     private bool savedPlayerControllerEnabled;
     private bool savedThirdPersonCameraEnabled;
     private bool skipRequested;
+    private readonly List<MinionChase3D> pausedEnemies = new List<MinionChase3D>();
 
     public IEnumerator PlayIntro()
     {
@@ -45,8 +49,8 @@ public class S02CutsceneController : MonoBehaviour
         if (FinishIfSkipped())
             yield break;
 
-        ShowStory("Văn An tỉnh dậy trong bóng tối dưới lòng thành phố.", 5.5f);
-        yield return SkippableWait(4.2f);
+        ShowCutsceneSubtitle(introSubtitle);
+        yield return SkippableWait(5.4f);
         if (FinishIfSkipped())
             yield break;
 
@@ -59,8 +63,9 @@ public class S02CutsceneController : MonoBehaviour
         if (FinishIfSkipped())
             yield break;
 
+        ShowCutsceneSubtitle("Không thể tấn công. Tìm lối ra.");
         ShowWarning("Không thể tấn công. Tìm lối ra.", 5f);
-        yield return SkippableWait(2f);
+        yield return SkippableWait(3f);
         if (FinishIfSkipped())
             yield break;
 
@@ -75,8 +80,8 @@ public class S02CutsceneController : MonoBehaviour
         Vector3 focus = descentHole != null ? descentHole.position : new Vector3(1f, 5f, 88f);
 
         SetCamera(focus + new Vector3(-7f, -1.1f, -8f), focus);
-        ShowStory("Tiếng đá nứt vang xuống từ hố sụp phía trên.", 4.5f);
-        yield return SkippableWait(1.4f);
+        ShowCutsceneSubtitle("Tiếng đá nứt vang xuống từ hố sụp phía trên.");
+        yield return SkippableWait(2.2f);
         if (FinishIfSkipped())
             yield break;
 
@@ -94,8 +99,9 @@ public class S02CutsceneController : MonoBehaviour
         if (FinishIfSkipped())
             yield break;
 
+        ShowCutsceneSubtitle("Hắc Tinh đã xuống hang. Chạy tới ánh sáng phía trước!");
         ShowWarning("Hắc Tinh đã xuống hang. Chạy tới ánh sáng phía trước!", 4.8f);
-        yield return SkippableWait(1.6f);
+        yield return SkippableWait(2.4f);
         if (FinishIfSkipped())
             yield break;
 
@@ -110,19 +116,19 @@ public class S02CutsceneController : MonoBehaviour
 
         HideInteractionText();
         SetCamera(riftFocus + new Vector3(0f, 2.2f, -10f), riftFocus + Vector3.up * 1.5f);
-        ShowStory("TimeRift phản ứng với Văn An.", 4.8f);
+        ShowCutsceneSubtitle("TimeRift phản ứng với Văn An.");
         PulseNamedLight("TimeRift_PointLight", 9f, 24f);
         PulseNamedLight("TimeRift_Blue_CoreLight", 7f, 20f);
         yield return OrbitCamera(riftFocus, 9.5f, 3.1f, 6.2f);
         if (FinishIfSkipped())
             yield break;
 
-        ShowStory("Năng lượng cộng hưởng tạm thời mở khóa phản kích.", 4.8f);
+        ShowCutsceneSubtitle("Năng lượng cộng hưởng tạm thời mở khóa phản kích.");
         yield return ShakeCamera(1.1f, 0.08f);
         if (FinishIfSkipped())
             yield break;
 
-        yield return SkippableWait(1.4f);
+        yield return SkippableWait(2.4f);
         if (FinishIfSkipped())
             yield break;
 
@@ -136,14 +142,14 @@ public class S02CutsceneController : MonoBehaviour
         Vector3 riftFocus = GetTimeRiftFocus();
 
         SetCamera(riftFocus + new Vector3(-6f, 3f, -8f), riftFocus + Vector3.up * 1.6f);
-        ShowStory("Khe nứt không ổn định nữa!", 4.2f);
+        ShowCutsceneSubtitle("Khe nứt không ổn định nữa!");
         PulseNamedLight("TimeRift_PointLight", 12f, 30f);
         PulseNamedLight("TimeRift_Blue_CoreLight", 10f, 24f);
         yield return ShakeCamera(1.8f, 0.16f);
         if (LoadNextSceneIfSkipped(nextSceneName))
             yield break;
 
-        ShowStory("Tất cả bị kéo vào dòng chảy thời gian...", 4.8f);
+        ShowCutsceneSubtitle("Tất cả bị kéo vào dòng chảy thời gian...");
         yield return OrbitCamera(riftFocus, 8f, 2.6f, 4.2f);
         if (LoadNextSceneIfSkipped(nextSceneName))
             yield break;
@@ -185,6 +191,7 @@ public class S02CutsceneController : MonoBehaviour
 
         EnsureFadeImage();
         EnsureSkipPrompt();
+        EnsureSubtitle();
     }
 
     private void BeginCutscene(bool allowCombat)
@@ -212,12 +219,16 @@ public class S02CutsceneController : MonoBehaviour
 
         if (playerCombat != null)
             playerCombat.enabled = allowCombat;
+
+        PauseActiveEnemies();
     }
 
     private void EndCutscene()
     {
+        HideCutsceneSubtitle();
         HideSkipPrompt();
         skipRequested = false;
+        RestorePausedEnemies();
 
         if (thirdPersonCamera != null)
             thirdPersonCamera.enabled = savedThirdPersonCameraEnabled;
@@ -230,6 +241,32 @@ public class S02CutsceneController : MonoBehaviour
             mainCamera.transform.position = savedCameraPosition;
             mainCamera.transform.rotation = savedCameraRotation;
         }
+    }
+
+    private void PauseActiveEnemies()
+    {
+        pausedEnemies.Clear();
+
+        MinionChase3D[] enemies = FindObjectsByType<MinionChase3D>(FindObjectsInactive.Exclude);
+        foreach (MinionChase3D enemy in enemies)
+        {
+            if (enemy == null || !enemy.enabled)
+                continue;
+
+            enemy.enabled = false;
+            pausedEnemies.Add(enemy);
+        }
+    }
+
+    private void RestorePausedEnemies()
+    {
+        foreach (MinionChase3D enemy in pausedEnemies)
+        {
+            if (enemy != null)
+                enemy.enabled = true;
+        }
+
+        pausedEnemies.Clear();
     }
 
     private IEnumerator MoveCamera(Vector3 fromPosition, Vector3 toPosition, Vector3 fromLookAt, Vector3 toLookAt, float duration)
@@ -341,6 +378,7 @@ public class S02CutsceneController : MonoBehaviour
             return false;
 
         HideSkipPrompt();
+        HideCutsceneSubtitle();
         LoadNextScene(nextSceneName);
         return true;
     }
@@ -412,6 +450,23 @@ public class S02CutsceneController : MonoBehaviour
             interactionText.gameObject.SetActive(false);
     }
 
+    private void ShowCutsceneSubtitle(string message)
+    {
+        EnsureSubtitle();
+        if (subtitleText == null)
+            return;
+
+        subtitleText.text = message;
+        subtitleText.gameObject.SetActive(true);
+        subtitleText.transform.SetAsLastSibling();
+    }
+
+    private void HideCutsceneSubtitle()
+    {
+        if (subtitleText != null)
+            subtitleText.gameObject.SetActive(false);
+    }
+
     private void EnsureFadeImage()
     {
         if (fadeImage != null)
@@ -477,6 +532,46 @@ public class S02CutsceneController : MonoBehaviour
         rect.sizeDelta = new Vector2(520f, 50f);
         promptObject.SetActive(false);
         promptObject.transform.SetAsLastSibling();
+    }
+
+    private void EnsureSubtitle()
+    {
+        if (subtitleText != null)
+            return;
+
+        Canvas canvas = FindAnyObjectByType<Canvas>();
+        if (canvas == null)
+            return;
+
+        GameObject subtitleObject = GameObject.Find("S02_CutsceneSubtitle");
+        if (subtitleObject == null)
+        {
+            subtitleObject = new GameObject("S02_CutsceneSubtitle");
+            subtitleObject.transform.SetParent(canvas.transform, false);
+        }
+
+        subtitleText = subtitleObject.GetComponent<TextMeshProUGUI>();
+        if (subtitleText == null)
+            subtitleText = subtitleObject.AddComponent<TextMeshProUGUI>();
+
+        subtitleText.fontSize = 32;
+        subtitleText.alignment = TextAlignmentOptions.Center;
+        subtitleText.color = new Color(0.92f, 0.98f, 1f, 1f);
+        subtitleText.raycastTarget = false;
+        subtitleText.textWrappingMode = TextWrappingModes.Normal;
+        subtitleText.outlineWidth = 0.22f;
+        subtitleText.outlineColor = new Color(0f, 0f, 0f, 0.88f);
+        subtitleText.text = string.Empty;
+
+        RectTransform rect = subtitleText.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0f);
+        rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = new Vector2(0f, 92f);
+        rect.sizeDelta = new Vector2(1320f, 112f);
+
+        subtitleObject.SetActive(false);
+        subtitleObject.transform.SetAsLastSibling();
     }
 
     private void ShowSkipPrompt()

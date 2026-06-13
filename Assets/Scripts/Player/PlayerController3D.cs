@@ -17,6 +17,8 @@ public class PlayerController3D : MonoBehaviour
     private CharacterController controller;
     private Vector3 velocity;
     private float originalStepOffset;
+    private float temporarySpeedMultiplier = 1f;
+    private float temporarySpeedUntil;
 
     private void Awake()
     {
@@ -36,7 +38,7 @@ public class PlayerController3D : MonoBehaviour
         float vertical = Input.GetAxisRaw("Vertical");
 
         Vector3 input = new Vector3(horizontal, 0f, vertical).normalized;
-        float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : moveSpeed;
+        float currentSpeed = (IsRunHeld() ? runSpeed : moveSpeed) * GetTemporarySpeedMultiplier();
 
         if (input.magnitude >= 0.1f)
         {
@@ -88,5 +90,25 @@ public class PlayerController3D : MonoBehaviour
     {
         controller.stepOffset = Mathf.Max(originalStepOffset, stepOffset);
         controller.slopeLimit = Mathf.Max(controller.slopeLimit, slopeLimit);
+    }
+
+    private bool IsRunHeld()
+    {
+        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+    }
+
+    public void ApplyTemporarySlow(float multiplier, float duration)
+    {
+        temporarySpeedMultiplier = Mathf.Clamp(multiplier, 0.05f, 1f);
+        temporarySpeedUntil = Time.time + Mathf.Max(0f, duration);
+    }
+
+    private float GetTemporarySpeedMultiplier()
+    {
+        if (Time.time <= temporarySpeedUntil)
+            return temporarySpeedMultiplier;
+
+        temporarySpeedMultiplier = 1f;
+        return 1f;
     }
 }

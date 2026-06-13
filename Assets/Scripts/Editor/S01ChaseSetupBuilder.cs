@@ -1,4 +1,4 @@
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
@@ -7,7 +7,6 @@ public static class S01ChaseSetupBuilder
     private const string ThreatName = "S01_ChaseThreat";
     private const string WaypointsName = "S01_ChaseWaypoints";
 
-    [MenuItem("Tools/Dong Chay Anh Hung/Create S01 Chase Threat")]
     public static void CreateS01ChaseThreat()
     {
         DeleteIfExists(ThreatName);
@@ -68,6 +67,8 @@ public static class S01ChaseSetupBuilder
         chaseThreat.farSpeedMultiplier = 1.55f;
         chaseThreat.veryFarSpeedMultiplier = 2f;
         chaseThreat.speedMultiplierChangeRate = 1.8f;
+        chaseThreat.catchDamage = 20;
+        chaseThreat.catchAttackCooldown = 0.85f;
         chaseThreat.debugLogs = true;
 
         Selection.activeGameObject = threat;
@@ -103,7 +104,7 @@ public static class S01ChaseSetupBuilder
 
     private static Vector3 GetThreatStartPosition(Vector3[] fallbackWaypoints)
     {
-        GameObject spawnPoint = GameObject.Find("EnemySpawn_ChaseStart");
+        GameObject spawnPoint = GameObject.Find("MinionSpawn_ChaseStart");
 
         if (spawnPoint != null)
             return spawnPoint.transform.position;
@@ -171,3 +172,4 @@ public static class S01ChaseSetupBuilder
         return null;
     }
 }
+

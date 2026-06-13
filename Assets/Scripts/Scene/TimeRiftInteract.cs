@@ -127,7 +127,7 @@ public class TimeRiftInteract : MonoBehaviour
                 Quaternion.identity
             );
 
-            EnemyChase3D enemyChase = enemy.GetComponent<EnemyChase3D>();
+            MinionChase3D enemyChase = enemy.GetComponent<MinionChase3D>();
 
             if (enemyChase != null && player != null)
             {

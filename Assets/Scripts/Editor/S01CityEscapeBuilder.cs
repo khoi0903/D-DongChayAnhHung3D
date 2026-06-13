@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -9,6 +10,27 @@ using UnityEngine.UI;
 public static class S01CityEscapeBuilder
 {
     private const string RootName = "S01_CityEscape_Generated";
+    private const string ModularBuildingsPath = "Assets/Models/Environment/Buildings/modular_buildings.glb";
+    private const string LowPolyBuildingsPath = "Assets/Models/Environment/Buildings/low-poly_city_buildings.glb";
+    private const string IndustrialPackPath = "Assets/Models/Environment/Buildings/psx_industrial_pack.glb";
+    private const string RoadPackPath = "Assets/Models/Environment/Roads/modular_city_road_pack__game_ready.glb";
+    private const string BarrierConePackPath = "Assets/Models/Environment/Props/Construction/barrier__traffic_cone_pack.glb";
+    private const string CardboardBoxesPath = "Assets/Models/Environment/Props/Construction/cardboard_boxes.glb";
+    private const string CaseBoxesPath = "Assets/Models/Environment/Props/Construction/case_boxes.glb";
+    private const string ConstructionFencePath = "Assets/Models/Environment/Props/Construction/construction_fence.glb";
+    private const string MinionPrefabPath = "Assets/Prefabs/Minion.prefab";
+    private const string DumpsterPath = "Assets/Models/Environment/Props/Construction/dumpster_-_4096px2.glb";
+    private const string FallenTreePath = "Assets/Models/Environment/Props/Construction/fallen_tree.glb";
+    private const string RockDebrisPath = "Assets/Models/Environment/Props/Construction/rock_debris_1.glb";
+    private const string WoodenCratePath = "Assets/Models/Environment/Props/Construction/wooden_crate_-_game_asset.glb";
+    private const string IronFencePath = "Assets/Models/Environment/Props/Fences/iron_fence.glb";
+    private const string MetalFenceBrokenPath = "Assets/Models/Environment/Props/Fences/metal_fence_broken.glb";
+    private const string ModularFencePath = "Assets/Models/Environment/Props/Fences/modular_fence_system.glb";
+    private const string OldWoodFencePath = "Assets/Models/Environment/Props/Fences/old_wood_fence.glb";
+    private const string RoadSignsPackPath = "Assets/Models/Environment/Props/Street/road_signs_pack.glb";
+    private const string StreetLightPath = "Assets/Models/Environment/Props/Street/street_light_fbx.glb";
+    private const string TrashBinPath = "Assets/Models/Environment/Props/Street/trash_bin.glb";
+    private const string WarningSignsPath = "Assets/Models/Environment/Props/Street/us_warning_road_signs.glb";
     private const float FloorY = 0f;
     private const float BarrierHeight = 2.2f;
 
@@ -51,7 +73,6 @@ public static class S01CityEscapeBuilder
         };
     }
 
-    [MenuItem("Tools/Dong Chay Anh Hung/Rebuild S01 City Escape Zigzag")]
     public static void BuildScene()
     {
         CleanupOldS01();
@@ -83,36 +104,87 @@ public static class S01CityEscapeBuilder
         CreateSafetyFloor();
         BuildLongRoute(roadMat, dirtMat, fenceMat);
         BuildMuseumStart(concreteMat, bronzeMat, warningMat);
+        BuildImportedEnvironmentKitVisuals();
+        BuildCinematicS01SetPieces(concreteMat, fenceMat, warningMat, orangeMat, mudMat, woodMat, crackMat);
         BuildBlockedMainRoad(concreteMat, warningMat, orangeMat);
         BuildWheelbarrowDelayTrap(concreteMat, warningMat, woodMat);
         BuildConstructionFence(concreteMat, fenceMat, warningMat);
         BuildFallingDebrisArea(concreteMat, woodMat, orangeMat, crackMat);
         BuildMudZone(mudMat, warningMat);
         BuildNarrowPassage(concreteMat, fenceMat);
+        BuildAmbushDodgeQTE(warningMat, orangeMat);
         BuildRouteGuidance(warningMat, orangeMat);
         BuildStoryTriggers();
         BuildCollapse(collapseMat, crackMat, warningMat);
 
-        CreateEmpty(chaseLaneTriggers, "EnemySpawn_ChaseStart", new Vector3(0f, 1f, -8f));
+        CreateEmpty(chaseLaneTriggers, "MinionSpawn_ChaseStart", new Vector3(0f, 1f, -8f));
+        S01ChaseSetupBuilder.CreateS01ChaseThreat();
 
         Selection.activeGameObject = root;
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("S01 rebuilt from scratch with clean long route.");
     }
 
+    public static void WriteS01ImportedModelKitReport()
+    {
+        string reportPath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Library", "CodexBridge", "s01_modelkit_report.json");
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(reportPath));
+
+        GameObject group = GameObject.Find("Imported_ModelKit_Visuals");
+        StringBuilder builder = new StringBuilder();
+        builder.Append("{\n");
+        builder.Append("  \"scene\": \"").Append(EscapeJsonForReport(EditorSceneManager.GetActiveScene().name)).Append("\",\n");
+        builder.Append("  \"found\": ").Append(group != null ? "true" : "false").Append(",\n");
+        builder.Append("  \"items\": [\n");
+
+        if (group != null)
+        {
+            bool first = true;
+            foreach (Transform child in group.transform)
+            {
+                Renderer[] renderers = child.GetComponentsInChildren<Renderer>(true);
+                Bounds bounds = renderers.Length > 0 ? renderers[0].bounds : new Bounds(child.position, Vector3.zero);
+                for (int i = 1; i < renderers.Length; i++)
+                    bounds.Encapsulate(renderers[i].bounds);
+
+                if (!first)
+                    builder.Append(",\n");
+
+                first = false;
+                builder.Append("    {\n");
+                builder.Append("      \"name\": \"").Append(EscapeJsonForReport(child.name)).Append("\",\n");
+                AppendVector(builder, "position", child.position, 6);
+                builder.Append(",\n");
+                AppendVector(builder, "rotation", child.eulerAngles, 6);
+                builder.Append(",\n");
+                AppendVector(builder, "scale", child.localScale, 6);
+                builder.Append(",\n");
+                AppendVector(builder, "boundsCenter", bounds.center, 6);
+                builder.Append(",\n");
+                AppendVector(builder, "boundsSize", bounds.size, 6);
+                builder.Append("\n    }");
+            }
+        }
+
+        builder.Append("\n  ]\n");
+        builder.Append("}\n");
+        System.IO.File.WriteAllText(reportPath, builder.ToString());
+        Debug.Log("S01 imported model kit report written to " + reportPath);
+    }
+
     private static void BuildLongRoute(Material roadMat, Material dirtMat, Material fenceMat)
     {
         RouteSegment[] segments =
         {
-            new RouteSegment("MuseumStreet_Start", new Vector3(0f, 0f, -6f), new Vector3(0f, 0f, 45f), 14f, roadMat),
-            new RouteSegment("ConstructionDetour_East", new Vector3(0f, 0f, 45f), new Vector3(45f, 0f, 45f), 10f, dirtMat),
-            new RouteSegment("ConstructionRun_North", new Vector3(45f, 0f, 45f), new Vector3(45f, 0f, 100f), 8f, dirtMat),
-            new RouteSegment("DebrisRun_West", new Vector3(45f, 0f, 100f), new Vector3(5f, 0f, 100f), 8f, dirtMat),
-            new RouteSegment("MudRun_North", new Vector3(5f, 0f, 100f), new Vector3(5f, 0f, 155f), 8f, dirtMat),
-            new RouteSegment("NarrowRun_West", new Vector3(5f, 0f, 155f), new Vector3(-40f, 0f, 155f), 8f, dirtMat),
-            new RouteSegment("LongEscape_North", new Vector3(-40f, 0f, 155f), new Vector3(-40f, 0f, 215f), 8f, dirtMat),
-            new RouteSegment("LongEscape_East", new Vector3(-40f, 0f, 215f), new Vector3(10f, 0f, 215f), 8f, dirtMat),
-            new RouteSegment("CollapseApproach_North", new Vector3(10f, 0f, 215f), new Vector3(10f, 0f, 265f), 8f, dirtMat)
+            new RouteSegment("MuseumStreet_Start", new Vector3(0f, 0f, -6f), new Vector3(0f, 0f, 45f), 18f, roadMat),
+            new RouteSegment("ConstructionDetour_East", new Vector3(0f, 0f, 45f), new Vector3(45f, 0f, 45f), 14.5f, dirtMat),
+            new RouteSegment("ConstructionRun_North", new Vector3(45f, 0f, 45f), new Vector3(45f, 0f, 100f), 14.5f, dirtMat),
+            new RouteSegment("DebrisRun_West", new Vector3(45f, 0f, 100f), new Vector3(5f, 0f, 100f), 12.5f, dirtMat),
+            new RouteSegment("MudRun_North", new Vector3(5f, 0f, 100f), new Vector3(5f, 0f, 155f), 13.5f, dirtMat),
+            new RouteSegment("NarrowRun_West", new Vector3(5f, 0f, 155f), new Vector3(-40f, 0f, 155f), 12.5f, dirtMat),
+            new RouteSegment("LongEscape_North", new Vector3(-40f, 0f, 155f), new Vector3(-40f, 0f, 215f), 12.5f, dirtMat),
+            new RouteSegment("LongEscape_East", new Vector3(-40f, 0f, 215f), new Vector3(10f, 0f, 215f), 14.5f, dirtMat),
+            new RouteSegment("CollapseApproach_North", new Vector3(10f, 0f, 215f), new Vector3(10f, 0f, 265f), 13.5f, dirtMat)
         };
 
         foreach (RouteSegment segment in segments)
@@ -143,6 +215,509 @@ public static class S01CityEscapeBuilder
         CreateStreetLamp(new Vector3(9f, 0f, 8f), warningMat);
         CreateStreetLamp(new Vector3(-9f, 0f, 26f), warningMat);
         CreateStreetLamp(new Vector3(9f, 0f, 39f), warningMat);
+    }
+
+    private static void BuildImportedEnvironmentKitVisuals()
+    {
+        GameObject modelGroup = CreateParent(staticEnvironment, "Imported_ModelKit_Visuals", Vector3.zero, Vector3.zero);
+        int placed = 0;
+
+        // The current city-building GLBs are whole-scene chunks with bad pivots and extra slab meshes.
+        // Keep S01 readable by using the cleaner construction props as the imported visual layer.
+        placed += CreateImportedModelVisual(modelGroup.transform, BarrierConePackPath, "BarrierConePack_MainRoadBlock_A", new Vector3(2f, 0f, 53f), new Vector3(0f, 8f, 0f), 1.4f, 8f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, BarrierConePackPath, "BarrierConePack_DetourEntrance", new Vector3(22f, 0f, 47.5f), new Vector3(0f, -18f, 0f), 1.25f, 7f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, BarrierConePackPath, "BarrierConePack_MudWarning", new Vector3(7f, 0f, 116f), new Vector3(0f, 32f, 0f), 1.15f, 6f) ? 1 : 0;
+
+        placed += CreateImportedModelVisual(modelGroup.transform, CardboardBoxesPath, "CardboardBoxes_MuseumSide", new Vector3(-10.8f, 0f, 31f), new Vector3(0f, -12f, 0f), 1f, 3f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, CardboardBoxesPath, "CardboardBoxes_MudApproach_Side", new Vector3(10.8f, 0f, 114f), new Vector3(0f, 25f, 0f), 1.1f, 3f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, CaseBoxesPath, "CaseBoxes_ConstructionRun_Side_A", new Vector3(51.5f, 0f, 72f), new Vector3(0f, -20f, 0f), 1.4f, 3.8f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, CaseBoxesPath, "CaseBoxes_ConstructionRun_Side_B", new Vector3(52f, 0f, 94f), new Vector3(0f, 18f, 0f), 1.25f, 3.5f) ? 1 : 0;
+
+        placed += CreateImportedModelVisual(modelGroup.transform, ConstructionFencePath, "ConstructionFence_DetourEdge_A", new Vector3(50.8f, 0f, 67f), new Vector3(0f, 0f, 0f), 2.1f, 5f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, ConstructionFencePath, "ConstructionFence_MudEntry_Edge", new Vector3(12f, 0f, 121f), new Vector3(0f, 90f, 0f), 2.1f, 5f) ? 1 : 0;
+
+        placed += CreateImportedModelVisual(modelGroup.transform, DumpsterPath, "Dumpster_DetourCorner_Side", new Vector3(47.8f, 0f, 57f), new Vector3(0f, 15f, 0f), 1.7f, 4.5f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, DumpsterPath, "Dumpster_DebrisCorner_Side", new Vector3(36f, 0f, 106.3f), new Vector3(0f, 90f, 0f), 1.9f, 4.8f) ? 1 : 0;
+
+        placed += CreateImportedModelVisual(modelGroup.transform, WoodenCratePath, "WoodenCrate_DetourSide_A", new Vector3(51.2f, 0f, 54f), new Vector3(0f, 25f, 0f), 1.2f, 3.5f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, WoodenCratePath, "WoodenCrate_DetourSide_B", new Vector3(39f, 0f, 103f), new Vector3(0f, -18f, 0f), 1.1f, 3.2f) ? 1 : 0;
+
+        placed += CreateImportedModelVisual(modelGroup.transform, RockDebrisPath, "RockDebris_DebrisTurn_Side", new Vector3(21f, 0f, 104f), new Vector3(0f, 12f, 0f), 1f, 6f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, RockDebrisPath, "RockDebris_CollapseZone_Side_A", new Vector3(14.7f, 0f, 252f), new Vector3(0f, -25f, 0f), 1.25f, 7f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, RockDebrisPath, "RockDebris_CollapseZone_Side_B", new Vector3(5.8f, 0f, 258f), new Vector3(0f, 36f, 0f), 1.1f, 6f) ? 1 : 0;
+
+        placed += CreateImportedModelVisual(modelGroup.transform, WarningSignsPath, "WarningSigns_Collapse_Side", new Vector3(4.2f, 0f, 246f), new Vector3(0f, 25f, 0f), 2f, 4.5f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, WarningSignsPath, "WarningSigns_MudEntry_Side", new Vector3(10.5f, 0f, 119f), new Vector3(0f, 350f, 0f), 1.8f, 4f) ? 1 : 0;
+        placed += CreateImportedModelVisual(modelGroup.transform, TrashBinPath, "TrashBin_MuseumStreet_Side", new Vector3(-10.8f, 0f, 23f), new Vector3(0f, 20f, 0f), 1.2f, 2.3f) ? 1 : 0;
+
+        placed = RemoveUnsafeImportedModelChildren(modelGroup.transform);
+
+        if (placed == 0)
+        {
+            UnityEngine.Object.DestroyImmediate(modelGroup);
+            BuildRoadSurfaceDressing();
+            Debug.LogWarning("S01CityEscapeBuilder: no imported environment models are importable yet. Using primitive fallback visuals.");
+            return;
+        }
+
+        BuildRoadSurfaceDressing();
+        Debug.Log("S01CityEscapeBuilder: placed " + placed + " imported environment model visuals. Imported models are visual-only; gameplay colliders remain primitive and stable.");
+    }
+
+    private static int RemoveUnsafeImportedModelChildren(Transform modelGroup)
+    {
+        int kept = 0;
+        for (int i = modelGroup.childCount - 1; i >= 0; i--)
+        {
+            Transform child = modelGroup.GetChild(i);
+            Bounds bounds = CalculateRendererBounds(child.gameObject);
+            string childName = child.name.ToLowerInvariant();
+            bool sourcePackRoot =
+                childName == "barrier__traffic_cone_pack" ||
+                childName == "cardboard_boxes" ||
+                childName == "case_boxes" ||
+                childName == "dumpster_-_4096px2" ||
+                childName == "wooden_crate_-_game_asset" ||
+                childName == "rock_debris_1" ||
+                childName == "construction_fence";
+            bool wrongSceneProp = childName.Contains("fallentree") || childName.Contains("fallen_tree");
+            bool originRoot = child.position.sqrMagnitude < 0.001f;
+            bool hugeBounds = Mathf.Max(bounds.size.x, bounds.size.z) > 40f || bounds.size.y > 30f;
+
+            if (wrongSceneProp || (sourcePackRoot && originRoot) || hugeBounds)
+            {
+                UnityEngine.Object.DestroyImmediate(child.gameObject);
+                continue;
+            }
+
+            kept++;
+        }
+
+        return kept;
+    }
+
+    private static void BuildRoadSurfaceDressing()
+    {
+        Material sidewalkMat = CreateMaterial("S01_City_Sidewalk", new Color32(116, 120, 124, 255));
+        Material stripeMat = CreateMaterial("S01_City_Road_Marking", new Color32(230, 225, 190, 255));
+
+        GameObject cityGroup = CreateParent(staticEnvironment, "Road_Surface_Dressing", Vector3.zero, Vector3.zero);
+
+        CreateCube(cityGroup.transform, "Left_Sidewalk_Start", new Vector3(-10.5f, 0.18f, 18f), Vector3.zero, new Vector3(5f, 0.22f, 58f), sidewalkMat);
+        CreateCube(cityGroup.transform, "Right_Sidewalk_Start", new Vector3(10.5f, 0.18f, 18f), Vector3.zero, new Vector3(5f, 0.22f, 58f), sidewalkMat);
+
+        for (int i = 0; i < 7; i++)
+        {
+            float z = -4f + i * 7.5f;
+            RemoveCollider(CreateCube(cityGroup.transform, "CenterLaneDash_" + i.ToString("00"), new Vector3(0f, 0.31f, z), Vector3.zero, new Vector3(0.22f, 0.045f, 3.2f), stripeMat));
+        }
+    }
+
+    private static void BuildCinematicS01SetPieces(Material concreteMat, Material fenceMat, Material warningMat, Material orangeMat, Material mudMat, Material woodMat, Material crackMat)
+    {
+        Material glassMat = CreateMaterial("S01_Cinematic_Glass", new Color32(64, 130, 160, 255));
+        Material darkMetalMat = CreateMaterial("S01_Cinematic_DarkMetal", new Color32(24, 27, 32, 255));
+        Material bannerMat = CreateMaterial("S01_Cinematic_Banner_Red", new Color32(146, 28, 34, 255));
+        Material blueBannerMat = CreateMaterial("S01_Cinematic_Banner_Blue", new Color32(32, 78, 142, 255));
+        Material leafMat = CreateMaterial("S01_Cinematic_Leaves", new Color32(46, 94, 55, 255));
+        Material shadowMat = CreateMaterial("S01_BlackStar_ShadowMarks", new Color32(18, 9, 28, 255));
+        Material lightGlowMat = CreateMaterial("S01_Cinematic_WarmGlow", new Color32(255, 211, 86, 255));
+
+        GameObject dressing = CreateParent(staticEnvironment, "Cinematic_SetPieces", Vector3.zero, Vector3.zero);
+        BuildMuseumPlazaDressing(dressing.transform, concreteMat, glassMat, bannerMat, blueBannerMat, warningMat, lightGlowMat);
+        BuildCityDepthDressing(dressing.transform, concreteMat, glassMat, bannerMat, blueBannerMat, darkMetalMat);
+        BuildConstructionDressing(dressing.transform, concreteMat, fenceMat, warningMat, orangeMat, woodMat, darkMetalMat, lightGlowMat);
+        BuildMudParkDressing(dressing.transform, mudMat, woodMat, leafMat, concreteMat, warningMat);
+        BuildCollapseDressing(dressing.transform, crackMat, shadowMat, orangeMat, warningMat, lightGlowMat);
+    }
+
+    private static void BuildMuseumPlazaDressing(Transform parent, Material concreteMat, Material glassMat, Material bannerMat, Material blueBannerMat, Material warningMat, Material lightGlowMat)
+    {
+        GameObject plaza = CreateParent(parent, "Museum_Plaza_SetPiece", Vector3.zero, Vector3.zero);
+        CreateVisualCube(plaza.transform, "MuseumFront_Steps", new Vector3(-8.6f, 0.35f, 10f), Vector3.zero, new Vector3(5f, 0.25f, 7f), concreteMat);
+        CreateVisualCube(plaza.transform, "MuseumFront_Awning", new Vector3(-8.8f, 5.9f, 10f), Vector3.zero, new Vector3(1.2f, 0.35f, 8.6f), warningMat);
+        CreateVisualCube(plaza.transform, "MuseumFront_GlassPanel_A", new Vector3(-8.15f, 2.9f, 8.1f), Vector3.zero, new Vector3(0.12f, 2.8f, 1.4f), glassMat);
+        CreateVisualCube(plaza.transform, "MuseumFront_GlassPanel_B", new Vector3(-8.15f, 2.9f, 11.9f), Vector3.zero, new Vector3(0.12f, 2.8f, 1.4f), glassMat);
+
+        for (int i = 0; i < 4; i++)
+        {
+            float z = 5.8f + i * 2.8f;
+            CreateVisualCylinder(plaza.transform, "MuseumColumn_" + i.ToString("00"), new Vector3(-8.1f, 2.4f, z), Vector3.zero, new Vector3(0.32f, 2.4f, 0.32f), concreteMat);
+        }
+
+        CreateVisualCube(plaza.transform, "MuseumBanner_DongSon", new Vector3(-7.9f, 4.5f, 6f), Vector3.zero, new Vector3(0.08f, 1.4f, 2.4f), bannerMat);
+        CreateVisualCube(plaza.transform, "MuseumBanner_CoLoa", new Vector3(-7.9f, 4.5f, 14f), Vector3.zero, new Vector3(0.08f, 1.4f, 2.4f), blueBannerMat);
+        CreateVisualCube(plaza.transform, "PhoneSignalWarning_Kiosk", new Vector3(8.5f, 1.35f, 3f), new Vector3(0f, -15f, 0f), new Vector3(0.45f, 2.7f, 1.4f), glassMat);
+        CreateVisualCube(plaza.transform, "Kiosk_LitScreen", new Vector3(8.18f, 1.55f, 3f), new Vector3(0f, -15f, 0f), new Vector3(0.08f, 1.3f, 0.9f), lightGlowMat);
+
+        for (int i = 0; i < 7; i++)
+        {
+            float z = -4f + i * 7f;
+            CreateVisualCylinder(plaza.transform, "StreetBollard_Left_" + i.ToString("00"), new Vector3(-8.4f, 0.55f, z), Vector3.zero, new Vector3(0.18f, 0.55f, 0.18f), warningMat);
+            CreateVisualCylinder(plaza.transform, "StreetBollard_Right_" + i.ToString("00"), new Vector3(8.4f, 0.55f, z + 3f), Vector3.zero, new Vector3(0.18f, 0.55f, 0.18f), warningMat);
+        }
+    }
+
+    private static void BuildCityDepthDressing(Transform parent, Material concreteMat, Material glassMat, Material bannerMat, Material blueBannerMat, Material darkMetalMat)
+    {
+        GameObject city = CreateParent(parent, "City_Depth_SetPiece", Vector3.zero, Vector3.zero);
+        CreateVisualCube(city.transform, "Overhead_Skywalk_Broken", new Vector3(21f, 7.5f, 44.5f), new Vector3(0f, 0f, -8f), new Vector3(18f, 0.35f, 2.1f), darkMetalMat);
+        CreateVisualCube(city.transform, "Skywalk_GlassShard_A", new Vector3(13f, 6.8f, 44.4f), new Vector3(0f, 0f, 18f), new Vector3(2f, 0.08f, 1.2f), glassMat);
+        CreateVisualCube(city.transform, "Skywalk_GlassShard_B", new Vector3(28f, 6.9f, 44.6f), new Vector3(0f, 0f, -20f), new Vector3(2.3f, 0.08f, 1.1f), glassMat);
+
+        CreateCylinderBetween(city.transform, "OverheadCable_Street_A", new Vector3(-10f, 6.2f, 12f), new Vector3(10f, 5.5f, 26f), 0.04f, darkMetalMat);
+        CreateCylinderBetween(city.transform, "OverheadCable_Street_B", new Vector3(-11f, 5.8f, 34f), new Vector3(12f, 5.2f, 42f), 0.04f, darkMetalMat);
+    }
+
+    private static void BuildConstructionDressing(Transform parent, Material concreteMat, Material fenceMat, Material warningMat, Material orangeMat, Material woodMat, Material darkMetalMat, Material lightGlowMat)
+    {
+        GameObject construction = CreateParent(parent, "Construction_Run_SetPiece", Vector3.zero, Vector3.zero);
+        CreateScaffoldTower(construction.transform, "Scaffold_East_A", new Vector3(52f, 0f, 60f), darkMetalMat, warningMat);
+        CreateScaffoldTower(construction.transform, "Scaffold_East_B", new Vector3(52f, 0f, 88f), darkMetalMat, warningMat);
+        CreateCylinderBetween(construction.transform, "LooseCable_Construction_A", new Vector3(52f, 6f, 60f), new Vector3(52f, 5.4f, 88f), 0.05f, darkMetalMat);
+        CreateCylinderBetween(construction.transform, "LooseCable_Construction_B", new Vector3(38f, 5.2f, 47f), new Vector3(52f, 5.8f, 60f), 0.04f, darkMetalMat);
+
+        CreateVisualCube(construction.transform, "Excavator_Silhouette_Base", new Vector3(56f, 0.7f, 82f), new Vector3(0f, -25f, 0f), new Vector3(4.2f, 1.4f, 2.2f), orangeMat);
+        CreateVisualCube(construction.transform, "Excavator_Silhouette_Arm", new Vector3(53f, 2.6f, 80.4f), new Vector3(0f, -25f, -24f), new Vector3(5.5f, 0.35f, 0.35f), orangeMat);
+        CreateVisualCube(construction.transform, "Excavator_Bucket", new Vector3(49.4f, 1.25f, 78.7f), new Vector3(0f, -25f, -8f), new Vector3(1.4f, 0.6f, 1f), darkMetalMat);
+
+        for (int i = 0; i < 5; i++)
+            CreateVisualCube(construction.transform, "CautionTape_" + i.ToString("00"), new Vector3(39f + i * 2.3f, 1.4f, 104f), new Vector3(0f, 12f, i % 2 == 0 ? 8f : -8f), new Vector3(1.8f, 0.12f, 0.08f), warningMat);
+
+        CreateVisualCube(construction.transform, "FloodLight_Stand_A", new Vector3(52f, 1.5f, 100f), Vector3.zero, new Vector3(0.18f, 3f, 0.18f), darkMetalMat);
+        CreateVisualCube(construction.transform, "FloodLight_A", new Vector3(51.5f, 3.25f, 100f), new Vector3(0f, -35f, 0f), new Vector3(0.8f, 0.5f, 0.35f), lightGlowMat);
+        CreateVisualCube(construction.transform, "StackedTimber_A", new Vector3(50.8f, 0.45f, 63f), new Vector3(0f, -10f, 0f), new Vector3(4.8f, 0.28f, 0.35f), woodMat);
+        CreateVisualCube(construction.transform, "StackedTimber_B", new Vector3(51.3f, 0.85f, 63.4f), new Vector3(0f, -12f, 0f), new Vector3(3.9f, 0.25f, 0.35f), woodMat);
+    }
+
+    private static void BuildMudParkDressing(Transform parent, Material mudMat, Material woodMat, Material leafMat, Material concreteMat, Material warningMat)
+    {
+        GameObject park = CreateParent(parent, "Mud_ParkEdge_SetPiece", Vector3.zero, Vector3.zero);
+        CreateVisualCube(park.transform, "MudRun_WetReflection_A", new Vector3(0.7f, 0.34f, 126f), Vector3.zero, new Vector3(2.4f, 0.035f, 7f), mudMat);
+        CreateVisualCube(park.transform, "MudRun_WetReflection_B", new Vector3(7.6f, 0.34f, 137f), Vector3.zero, new Vector3(1.5f, 0.035f, 5f), mudMat);
+
+        Vector3[] treePositions =
+        {
+            new Vector3(13.2f, 0f, 118f),
+            new Vector3(13.5f, 0f, 132f),
+            new Vector3(-3.4f, 0f, 143f),
+            new Vector3(12.5f, 0f, 150f)
+        };
+
+        foreach (Vector3 position in treePositions)
+            CreateRoughTree(park.transform, position, woodMat, leafMat);
+
+        CreateVisualCube(park.transform, "BrokenParkFence_A", new Vector3(11.5f, 1f, 121f), new Vector3(0f, 18f, 8f), new Vector3(0.25f, 2f, 4.2f), woodMat);
+        CreateVisualCube(park.transform, "BrokenParkFence_B", new Vector3(11.2f, 1f, 139f), new Vector3(0f, -14f, -10f), new Vector3(0.25f, 2f, 5f), woodMat);
+        CreateVisualCube(park.transform, "WarningBoard_Mud", new Vector3(9.8f, 1.8f, 119f), new Vector3(0f, -30f, 0f), new Vector3(0.12f, 1.2f, 1.9f), warningMat);
+        CreateVisualCube(park.transform, "WarningBoard_Post", new Vector3(10.2f, 0.8f, 119.2f), new Vector3(0f, -30f, 0f), new Vector3(0.16f, 1.6f, 0.16f), concreteMat);
+    }
+
+    private static void BuildCollapseDressing(Transform parent, Material crackMat, Material shadowMat, Material orangeMat, Material warningMat, Material lightGlowMat)
+    {
+        GameObject collapse = CreateParent(parent, "Collapse_Finale_SetPiece", Vector3.zero, Vector3.zero);
+        for (int i = 0; i < 10; i++)
+        {
+            float angle = i * 36f;
+            Vector3 offset = Quaternion.Euler(0f, angle, 0f) * new Vector3(0f, 0f, 8f);
+            CreateVisualCube(collapse.transform, "CollapseCrack_Ray_" + i.ToString("00"), new Vector3(10f, 0.42f, 260f) + offset * 0.45f, new Vector3(0f, angle, 0f), new Vector3(0.18f, 0.04f, 7f), i % 2 == 0 ? crackMat : shadowMat);
+        }
+
+        CreateVisualCube(collapse.transform, "BlackStar_ShadowTrail_A", new Vector3(10f, 0.38f, 235f), new Vector3(0f, 8f, 0f), new Vector3(3f, 0.035f, 13f), shadowMat);
+        CreateVisualCube(collapse.transform, "BlackStar_ShadowTrail_B", new Vector3(4f, 0.39f, 247f), new Vector3(0f, -18f, 0f), new Vector3(1.2f, 0.035f, 8f), shadowMat);
+        CreateVisualCube(collapse.transform, "EmergencyLight_Post_A", new Vector3(2.6f, 1.2f, 255f), new Vector3(0f, 0f, -12f), new Vector3(0.18f, 2.4f, 0.18f), orangeMat);
+        CreateVisualCube(collapse.transform, "EmergencyLight_Lamp_A", new Vector3(2.35f, 2.45f, 255f), Vector3.zero, new Vector3(0.7f, 0.35f, 0.35f), lightGlowMat);
+        CreateVisualCube(collapse.transform, "EmergencyLight_Post_B", new Vector3(17.2f, 1.2f, 258f), new Vector3(0f, 0f, 15f), new Vector3(0.18f, 2.4f, 0.18f), orangeMat);
+        CreateVisualCube(collapse.transform, "EmergencyLight_Lamp_B", new Vector3(17.45f, 2.45f, 258f), Vector3.zero, new Vector3(0.7f, 0.35f, 0.35f), warningMat);
+    }
+
+    private static void CreateFacadeBlock(Transform parent, string name, Vector3 basePosition, Vector3 size, Material wallMat, Material glassMat, Material signMat, bool facesRight)
+    {
+        GameObject facade = CreateParent(parent, name, basePosition, Vector3.zero);
+        CreateVisualChildCube(facade.transform, "Mass", new Vector3(0f, size.y * 0.5f, 0f), Vector3.zero, size, wallMat);
+
+        float frontX = facesRight ? size.x * 0.51f : -size.x * 0.51f;
+        for (int floor = 0; floor < Mathf.Max(3, Mathf.FloorToInt(size.y / 3f)); floor++)
+        {
+            float y = 3f + floor * 2.8f;
+            for (int col = -2; col <= 2; col++)
+                CreateVisualChildCube(facade.transform, "LitWindow_" + floor + "_" + col, new Vector3(frontX, y, col * 2.1f), Vector3.zero, new Vector3(0.09f, 1f, 1.1f), glassMat);
+        }
+
+        CreateVisualChildCube(facade.transform, "StreetLevel_Sign", new Vector3(frontX, 2f, 0f), Vector3.zero, new Vector3(0.12f, 0.8f, size.z * 0.7f), signMat);
+    }
+
+    private static void CreateScaffoldTower(Transform parent, string name, Vector3 basePosition, Material metalMat, Material warningMat)
+    {
+        GameObject tower = CreateParent(parent, name, basePosition, Vector3.zero);
+        for (int level = 0; level < 3; level++)
+        {
+            float y = 1.2f + level * 1.8f;
+            CreateVisualChildCube(tower.transform, "Platform_" + level, new Vector3(0f, y, 0f), Vector3.zero, new Vector3(4f, 0.18f, 2.2f), metalMat);
+            CreateVisualChildCube(tower.transform, "Rail_" + level + "_A", new Vector3(0f, y + 0.55f, 1.1f), Vector3.zero, new Vector3(4f, 0.12f, 0.12f), warningMat);
+            CreateVisualChildCube(tower.transform, "Rail_" + level + "_B", new Vector3(0f, y + 0.55f, -1.1f), Vector3.zero, new Vector3(4f, 0.12f, 0.12f), warningMat);
+        }
+
+        for (int x = -1; x <= 1; x += 2)
+        {
+            for (int z = -1; z <= 1; z += 2)
+                CreateVisualChildCube(tower.transform, "Post_" + x + "_" + z, new Vector3(x * 1.9f, 2.8f, z * 1f), Vector3.zero, new Vector3(0.12f, 5.6f, 0.12f), metalMat);
+        }
+    }
+
+    private static void CreateRoughTree(Transform parent, Vector3 position, Material trunkMat, Material leafMat)
+    {
+        GameObject tree = CreateParent(parent, "RoughTree_" + Mathf.RoundToInt(position.x) + "_" + Mathf.RoundToInt(position.z), position, Vector3.zero);
+        CreateVisualChildPrimitive(tree.transform, "Trunk", PrimitiveType.Cylinder, new Vector3(0f, 1.7f, 0f), new Vector3(0f, 0f, 6f), new Vector3(0.28f, 1.7f, 0.28f), trunkMat);
+        CreateVisualChildPrimitive(tree.transform, "Canopy_A", PrimitiveType.Sphere, new Vector3(0f, 3.8f, 0f), Vector3.zero, new Vector3(1.9f, 1.1f, 1.5f), leafMat);
+        CreateVisualChildPrimitive(tree.transform, "Canopy_B", PrimitiveType.Sphere, new Vector3(0.7f, 3.45f, -0.25f), Vector3.zero, new Vector3(1.5f, 0.9f, 1.2f), leafMat);
+        CreateVisualChildPrimitive(tree.transform, "Canopy_C", PrimitiveType.Sphere, new Vector3(-0.65f, 3.5f, 0.35f), Vector3.zero, new Vector3(1.4f, 0.85f, 1.25f), leafMat);
+    }
+
+    private static void CreatePrimitiveCityBuilding(Transform parent, string name, Vector3 basePosition, Vector3 size, Material wallMat, Material glassMat, Material signMat, bool facesRight)
+    {
+        GameObject building = CreateParent(parent, name, basePosition, Vector3.zero);
+        CreateChildCube(building.transform, "Mass", new Vector3(0f, size.y * 0.5f, 0f), size, wallMat);
+
+        float frontX = facesRight ? size.x * 0.51f : -size.x * 0.51f;
+        float surfaceOffset = facesRight ? 0.02f : -0.02f;
+        float yStart = 3.3f;
+        int floors = Mathf.Max(2, Mathf.FloorToInt((size.y - 2f) / 3f));
+        for (int floor = 0; floor < floors; floor++)
+        {
+            float y = yStart + floor * 2.5f;
+            for (int col = -1; col <= 1; col++)
+            {
+                GameObject window = CreateChildPrimitive(building.transform, "Window_" + floor + "_" + col, PrimitiveType.Cube, new Vector3(frontX + surfaceOffset, y, col * 2.1f), Vector3.zero, new Vector3(0.08f, 1.1f, 1.25f), glassMat);
+                RemoveCollider(window);
+            }
+        }
+
+        GameObject sign = CreateChildPrimitive(building.transform, "Store_Sign", PrimitiveType.Cube, new Vector3(frontX + surfaceOffset, 2.15f, 0f), Vector3.zero, new Vector3(0.1f, 0.7f, size.z * 0.72f), signMat);
+        RemoveCollider(sign);
+
+        GameObject shutter = CreateChildPrimitive(building.transform, "Ground_Shutter", PrimitiveType.Cube, new Vector3(frontX + surfaceOffset * 1.5f, 1.05f, 0f), Vector3.zero, new Vector3(0.1f, 1.75f, size.z * 0.42f), glassMat);
+        RemoveCollider(shutter);
+    }
+
+    private static void CreateAlleyHint(Transform parent, string name, Vector3 position, Material wallMat, Material warningMat)
+    {
+        GameObject hint = CreateParent(parent, name, position, new Vector3(0f, -16f, 0f));
+        CreateChildCube(hint.transform, "LeftBlock", new Vector3(0f, 1.2f, -2.4f), new Vector3(0.8f, 2.4f, 5f), wallMat);
+        CreateChildCube(hint.transform, "RightBlock", new Vector3(7f, 1.2f, 2.4f), new Vector3(0.8f, 2.4f, 5f), wallMat);
+        RemoveCollider(CreateChildPrimitive(hint.transform, "DetourSign", PrimitiveType.Cube, new Vector3(3.5f, 2.4f, -1.9f), new Vector3(0f, 0f, 0f), new Vector3(4.2f, 0.85f, 0.12f), warningMat));
+    }
+
+    private static void CreateStreetTree(Transform parent, Vector3 position, Material foliageMat)
+    {
+        Material trunkMat = CreateMaterial("S01_City_Tree_Trunk", new Color32(82, 58, 38, 255));
+        GameObject tree = CreateParent(parent, "StreetTree_" + Mathf.RoundToInt(position.x) + "_" + Mathf.RoundToInt(position.z), position, Vector3.zero);
+        RemoveCollider(CreateChildPrimitive(tree.transform, "Trunk", PrimitiveType.Cylinder, new Vector3(0f, 1f, 0f), Vector3.zero, new Vector3(0.22f, 1.8f, 0.22f), trunkMat));
+        RemoveCollider(CreateChildPrimitive(tree.transform, "Canopy", PrimitiveType.Sphere, new Vector3(0f, 2.5f, 0f), Vector3.zero, new Vector3(1.6f, 1.5f, 1.6f), foliageMat));
+    }
+
+    private static bool CreateImportedModelVisual(Transform parent, string assetPath, string name, Vector3 targetPosition, Vector3 rotation, float targetHeight, float maxFootprint)
+    {
+        GameObject sourceModel = LoadImportedModel(assetPath);
+        if (sourceModel == null)
+            return false;
+
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(sourceModel);
+        if (instance == null)
+            instance = UnityEngine.Object.Instantiate(sourceModel);
+
+        instance.name = name;
+        instance.transform.SetParent(parent, false);
+        instance.transform.position = Vector3.zero;
+        instance.transform.eulerAngles = rotation;
+        instance.transform.localScale = Vector3.one;
+
+        DisableImportedGameplayComponents(instance);
+        NormalizeImportedVisual(instance, targetPosition, targetHeight, maxFootprint);
+        instance.name = name;
+
+        if (!ImportedVisualLooksUsable(instance, targetPosition, maxFootprint))
+        {
+            Debug.LogWarning("S01CityEscapeBuilder: skipped imported model with unsafe bounds/pivot: " + name);
+            UnityEngine.Object.DestroyImmediate(instance);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool CreateImportedFilteredModelVisual(Transform parent, string assetPath, string name, Vector3 targetPosition, Vector3 rotation, float targetHeight, float maxFootprint, params string[] keepNameTokens)
+    {
+        GameObject sourceModel = LoadImportedModel(assetPath);
+        if (sourceModel == null)
+            return false;
+
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(sourceModel);
+        if (instance == null)
+            instance = UnityEngine.Object.Instantiate(sourceModel);
+
+        instance.name = name;
+        instance.transform.SetParent(parent, false);
+        instance.transform.position = Vector3.zero;
+        instance.transform.eulerAngles = rotation;
+        instance.transform.localScale = Vector3.one;
+
+        DisableImportedGameplayComponents(instance);
+        DisableRenderersExceptNameTokens(instance, keepNameTokens);
+
+        Bounds filteredBounds = CalculateRendererBounds(instance);
+        if (filteredBounds.size.sqrMagnitude <= 0.001f)
+        {
+            Debug.LogWarning("S01CityEscapeBuilder: filtered model has no visible renderer after token filtering: " + name);
+            UnityEngine.Object.DestroyImmediate(instance);
+            return false;
+        }
+
+        NormalizeImportedVisual(instance, targetPosition, targetHeight, maxFootprint);
+        instance.name = name;
+
+        if (!ImportedVisualLooksUsable(instance, targetPosition, maxFootprint))
+        {
+            Debug.LogWarning("S01CityEscapeBuilder: skipped filtered imported model with unsafe bounds/pivot: " + name);
+            UnityEngine.Object.DestroyImmediate(instance);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static GameObject LoadImportedModel(string assetPath)
+    {
+        if (!System.IO.File.Exists(assetPath))
+        {
+            Debug.LogWarning("S01CityEscapeBuilder: model file missing: " + assetPath);
+            return null;
+        }
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+        GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+        if (model == null)
+            Debug.LogWarning("S01CityEscapeBuilder: Unity has not imported this model as a GameObject yet: " + assetPath);
+
+        return model;
+    }
+
+    private static void DisableImportedGameplayComponents(GameObject root)
+    {
+        Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
+        foreach (Collider collider in colliders)
+            UnityEngine.Object.DestroyImmediate(collider);
+
+        Rigidbody[] rigidbodies = root.GetComponentsInChildren<Rigidbody>(true);
+        foreach (Rigidbody rigidbody in rigidbodies)
+            UnityEngine.Object.DestroyImmediate(rigidbody);
+
+        Animator[] animators = root.GetComponentsInChildren<Animator>(true);
+        foreach (Animator animator in animators)
+            animator.enabled = false;
+    }
+
+    private static void DisableRenderersExceptNameTokens(GameObject root, string[] keepNameTokens)
+    {
+        if (keepNameTokens == null || keepNameTokens.Length == 0)
+            return;
+
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            string path = GetHierarchyPath(renderer.transform).ToLowerInvariant();
+            bool keep = false;
+
+            foreach (string token in keepNameTokens)
+            {
+                if (!string.IsNullOrWhiteSpace(token) && path.Contains(token.ToLowerInvariant()))
+                {
+                    keep = true;
+                    break;
+                }
+            }
+
+            renderer.enabled = keep;
+        }
+    }
+
+    private static string GetHierarchyPath(Transform transform)
+    {
+        StringBuilder builder = new StringBuilder(transform.name);
+        Transform current = transform.parent;
+        while (current != null)
+        {
+            builder.Insert(0, current.name + "/");
+            current = current.parent;
+        }
+
+        return builder.ToString();
+    }
+
+    private static void NormalizeImportedVisual(GameObject visualRoot, Vector3 targetPosition, float targetHeight, float maxFootprint)
+    {
+        Bounds bounds = CalculateRendererBounds(visualRoot);
+        if (bounds.size.sqrMagnitude <= 0.001f)
+        {
+            visualRoot.transform.position = targetPosition;
+            return;
+        }
+
+        float heightScale = targetHeight / Mathf.Max(0.1f, bounds.size.y);
+        float footprint = Mathf.Max(bounds.size.x, bounds.size.z);
+        float footprintScale = maxFootprint / Mathf.Max(0.1f, footprint);
+        float finalScale = Mathf.Min(heightScale, footprintScale);
+        visualRoot.transform.localScale *= finalScale;
+
+        bounds = CalculateRendererBounds(visualRoot);
+        Vector3 offset = targetPosition - new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+        visualRoot.transform.position += offset;
+    }
+
+    private static bool ImportedVisualLooksUsable(GameObject visualRoot, Vector3 targetPosition, float maxFootprint)
+    {
+        Bounds bounds = CalculateRendererBounds(visualRoot);
+        if (bounds.size.sqrMagnitude <= 0.001f)
+            return false;
+
+        float footprint = Mathf.Max(bounds.size.x, bounds.size.z);
+        if (footprint > maxFootprint * 1.35f)
+            return false;
+
+        Vector2 targetXZ = new Vector2(targetPosition.x, targetPosition.z);
+        Vector2 centerXZ = new Vector2(bounds.center.x, bounds.center.z);
+        if (Vector2.Distance(targetXZ, centerXZ) > maxFootprint * 0.75f)
+            return false;
+
+        if (bounds.min.y < -0.35f || bounds.min.y > 0.35f)
+            return false;
+
+        return true;
+    }
+
+    private static Bounds CalculateRendererBounds(GameObject root)
+    {
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        Bounds bounds = new Bounds(root.transform.position, Vector3.zero);
+        bool hasBounds = false;
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null || !renderer.enabled)
+                continue;
+
+            if (!hasBounds)
+            {
+                bounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        return bounds;
     }
 
     private static void BuildBlockedMainRoad(Material concreteMat, Material warningMat, Material orangeMat)
@@ -200,6 +775,8 @@ public static class S01CityEscapeBuilder
     {
         CreateConcreteBlock(new Vector3(42f, 1f, 91f), concreteMat);
         CreateConcreteBlock(new Vector3(48f, 1f, 91f), concreteMat);
+        CreateCube(routeBarriers, "ConstructionFence_LeftSideBlocker", new Vector3(40.4f, 1.1f, 91f), Vector3.zero, new Vector3(5.2f, 2.2f, 1.2f), concreteMat);
+        CreateCube(routeBarriers, "ConstructionFence_RightSideBlocker", new Vector3(49.6f, 1.1f, 91f), Vector3.zero, new Vector3(5.2f, 2.2f, 1.2f), concreteMat);
 
         GameObject fence = CreateParent(interactiveObstacles, "QTE_ConstructionFence", new Vector3(45f, 0f, 91f), Vector3.zero);
         CreateChildCube(fence.transform, "Fence_Panel", new Vector3(0f, 1.1f, 0f), new Vector3(3.8f, 2.2f, 0.2f), fenceMat);
@@ -254,6 +831,117 @@ public static class S01CityEscapeBuilder
         CreateWarningTrigger("NarrowPassage_ConstructionGap", new Vector3(-5f, 1.2f, 155f), new Vector3(8f, 3f, 5f), "Lách qua khe hẹp phía trước!", false);
         CreateGuideBeacon(new Vector3(-8f, 0f, 155f), fenceMat);
         CreateGuideBeacon(new Vector3(-28f, 0f, 155f), fenceMat);
+    }
+
+    private static void BuildAmbushDodgeQTE(Material warningMat, Material orangeMat)
+    {
+        CreateAmbushDodgeTrigger(
+            "AmbushDodgeQTE_01",
+            new Vector3(32f, 1.2f, 100f),
+            new Vector3(8f, 3f, 7f),
+            new Vector3(0f, 1f, -9f),
+            new Vector3(0f, 1f, 9f),
+            "Hắc Tinh lao ra từ hai bên! Nhấn E để né!",
+            "Né được rồi! Đừng dừng lại!",
+            warningMat,
+            orangeMat);
+
+        CreateAmbushDodgeTrigger(
+            "AmbushDodgeQTE_02",
+            new Vector3(-25f, 1.2f, 155f),
+            new Vector3(8f, 3f, 6f),
+            new Vector3(0f, 1f, -8f),
+            new Vector3(0f, 1f, 8f),
+            "Nó vòng qua khe hẹp! Nhấn E để lách người né!",
+            "Thoát sát nút! Chạy tới vùng sụp!",
+            warningMat,
+            orangeMat);
+    }
+
+    private static void CreateAmbushDodgeTrigger(string name, Vector3 position, Vector3 size, Vector3 leftOffset, Vector3 rightOffset, string warningMessage, string successMessage, Material warningMat, Material orangeMat)
+    {
+        GameObject trigger = CreateCube(dynamicZones, name, position, Vector3.zero, size, null);
+        Renderer renderer = trigger.GetComponent<Renderer>();
+        if (renderer != null)
+            renderer.enabled = false;
+
+        BoxCollider collider = trigger.GetComponent<BoxCollider>();
+        collider.isTrigger = true;
+
+        AddAmbushDodgeComponent(trigger, leftOffset, rightOffset, warningMessage, successMessage);
+
+        CreateVisualCube(dynamicZones, name + "_Shadow_Left", position + leftOffset + new Vector3(0f, -0.84f, 0f), Vector3.zero, new Vector3(2.4f, 0.04f, 3.2f), orangeMat);
+        CreateVisualCube(dynamicZones, name + "_Shadow_Right", position + rightOffset + new Vector3(0f, -0.84f, 0f), Vector3.zero, new Vector3(2.4f, 0.04f, 3.2f), orangeMat);
+        CreateGuideBeacon(position + new Vector3(-3.2f, -1.2f, 0f), warningMat);
+        CreateGuideBeacon(position + new Vector3(3.2f, -1.2f, 0f), warningMat);
+    }
+
+    private static void AddAmbushDodgeComponent(GameObject trigger, Vector3 leftOffset, Vector3 rightOffset, string warningMessage, string successMessage)
+    {
+        Type ambushType = Type.GetType("S01AmbushDodgeQTE, Assembly-CSharp");
+        if (ambushType == null)
+        {
+            Debug.LogWarning("S01AmbushDodgeQTE is not compiled yet. Let Unity compile scripts, then rebuild S01.");
+            return;
+        }
+
+        Component ambush = trigger.AddComponent(ambushType);
+        SetPublicField(ambush, "player", FindPlayerTransform());
+        SetPublicField(ambush, "warningUI", warningUI);
+        SetPublicField(ambush, "minionPrefab", AssetDatabase.LoadAssetAtPath<GameObject>(MinionPrefabPath));
+        SetPublicField(ambush, "leftStartOffset", leftOffset);
+        SetPublicField(ambush, "rightStartOffset", rightOffset);
+        SetPublicField(ambush, "attackTargetOffset", Vector3.zero);
+        SetPublicField(ambush, "qteDuration", 1f);
+        SetPublicField(ambush, "slowMotionTimeScale", 0.28f);
+        SetPublicField(ambush, "lungeDistancePastPlayer", 3.5f);
+        SetPublicField(ambush, "ambushMinionsJoinChaseOnDodge", true);
+        SetPublicField(ambush, "joinedMinionMoveSpeed", 5.5f);
+        SetPublicField(ambush, "joinedMinionChaseRange", 120f);
+        SetPublicField(ambush, "joinedMinionAttackGrace", 1.2f);
+        SetPublicField(ambush, "joinBehindPlayerDistance", 7f);
+        SetPublicField(ambush, "joinSideSpacing", 1.2f);
+        SetPublicField(ambush, "joinColliderDelay", 0.35f);
+        SetPublicField(ambush, "attackFeedbackPause", 0.85f);
+        SetPublicField(ambush, "failedDodgeDamage", 20);
+        SetPublicField(ambush, "warningMessage", warningMessage);
+        SetPublicField(ambush, "successMessage", successMessage);
+        SetPublicField(ambush, "failMessage", "Bạn né không kịp. Hắc Tinh đã bắt được bạn!");
+    }
+
+    public static void ConfigureExistingAmbushMinions()
+    {
+        GameObject minionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MinionPrefabPath);
+        S01AmbushDodgeQTE[] ambushes = UnityEngine.Object.FindObjectsByType<S01AmbushDodgeQTE>(FindObjectsInactive.Include);
+
+        foreach (S01AmbushDodgeQTE ambush in ambushes)
+        {
+            ambush.minionPrefab = minionPrefab;
+            ambush.ambushMinionsJoinChaseOnDodge = true;
+            ambush.joinedMinionMoveSpeed = 5.5f;
+            ambush.joinedMinionChaseRange = 120f;
+            ambush.joinedMinionAttackGrace = 1.2f;
+            ambush.joinBehindPlayerDistance = 7f;
+            ambush.joinSideSpacing = 1.2f;
+            ambush.joinColliderDelay = 0.35f;
+            ambush.attackFeedbackPause = 0.85f;
+            ambush.failedDodgeDamage = 20;
+            EditorUtility.SetDirty(ambush);
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
+        Debug.Log("S01CityEscapeBuilder: configured " + ambushes.Length + " ambush trigger(s) to spawn Minion prefab and join chase after missed attacks.");
+    }
+
+    private static void SetPublicField(Component target, string fieldName, object value)
+    {
+        if (target == null)
+            return;
+
+        System.Reflection.FieldInfo field = target.GetType().GetField(fieldName);
+        if (field != null)
+            field.SetValue(target, value);
     }
 
     private static void BuildRouteGuidance(Material warningMat, Material orangeMat)
@@ -319,7 +1007,10 @@ public static class S01CityEscapeBuilder
         {
             SceneTransitionTrigger transition = exit.AddComponent<SceneTransitionTrigger>();
             transition.nextSceneName = "S02_UndergroundCave";
-            transition.delayBeforeLoad = 1.5f;
+            transition.delayBeforeLoad = 0.1f;
+            transition.waitForGroundCollapseSound = true;
+            transition.maxGroundCollapseWaitTime = 1.2f;
+            transition.postSoundLoadPadding = 0f;
         }
         else
         {
@@ -511,6 +1202,15 @@ public static class S01CityEscapeBuilder
         }
     }
 
+    private static Transform FindPlayerTransform()
+    {
+        GameObject player = GameObject.Find("Player");
+        if (player == null)
+            player = GameObject.FindGameObjectWithTag("Player");
+
+        return player != null ? player.transform : null;
+    }
+
     private static void SetupUI()
     {
         Canvas canvas = UnityEngine.Object.FindAnyObjectByType<Canvas>();
@@ -597,6 +1297,28 @@ public static class S01CityEscapeBuilder
         return keep;
     }
 
+    private static void AppendVector(StringBuilder builder, string name, Vector3 value, int indent)
+    {
+        string spacing = new string(' ', indent);
+        builder.Append(spacing).Append("\"").Append(name).Append("\": { ");
+        builder.Append("\"x\": ").Append(value.x.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)).Append(", ");
+        builder.Append("\"y\": ").Append(value.y.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)).Append(", ");
+        builder.Append("\"z\": ").Append(value.z.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)).Append(" }");
+    }
+
+    private static string EscapeJsonForReport(string value)
+    {
+        if (value == null)
+            return string.Empty;
+
+        return value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\r", "\\r")
+            .Replace("\n", "\\n")
+            .Replace("\t", "\\t");
+    }
+
     private static void CreateSafetyFloor()
     {
         GameObject floor = CreateCube(staticEnvironment, "Safety_Floor_S01", new Vector3(0f, -1f, 130f), Vector3.zero, new Vector3(180f, 0.2f, 330f), null);
@@ -632,6 +1354,59 @@ public static class S01CityEscapeBuilder
     private static GameObject CreateCube(Transform parent, string name, Vector3 position, Vector3 rotation, Vector3 scale, Material material)
     {
         return CreatePrimitive(parent, name, PrimitiveType.Cube, position, rotation, scale, material);
+    }
+
+    private static GameObject CreateVisualCube(Transform parent, string name, Vector3 position, Vector3 rotation, Vector3 scale, Material material)
+    {
+        GameObject obj = CreateCube(parent, name, position, rotation, scale, material);
+        RemoveCollider(obj);
+        return obj;
+    }
+
+    private static GameObject CreateVisualCylinder(Transform parent, string name, Vector3 position, Vector3 rotation, Vector3 scale, Material material)
+    {
+        GameObject obj = CreatePrimitive(parent, name, PrimitiveType.Cylinder, position, rotation, scale, material);
+        RemoveCollider(obj);
+        return obj;
+    }
+
+    private static GameObject CreateVisualPrimitive(Transform parent, string name, PrimitiveType type, Vector3 position, Vector3 rotation, Vector3 scale, Material material)
+    {
+        GameObject obj = CreatePrimitive(parent, name, type, position, rotation, scale, material);
+        RemoveCollider(obj);
+        return obj;
+    }
+
+    private static GameObject CreateVisualChildCube(Transform parent, string name, Vector3 localPosition, Vector3 localRotation, Vector3 scale, Material material)
+    {
+        GameObject obj = CreateChildPrimitive(parent, name, PrimitiveType.Cube, localPosition, localRotation, scale, material);
+        RemoveCollider(obj);
+        return obj;
+    }
+
+    private static GameObject CreateVisualChildPrimitive(Transform parent, string name, PrimitiveType type, Vector3 localPosition, Vector3 localRotation, Vector3 scale, Material material)
+    {
+        GameObject obj = CreateChildPrimitive(parent, name, type, localPosition, localRotation, scale, material);
+        RemoveCollider(obj);
+        return obj;
+    }
+
+    private static GameObject CreateCylinderBetween(Transform parent, string name, Vector3 start, Vector3 end, float radius, Material material)
+    {
+        Vector3 direction = end - start;
+        float length = direction.magnitude;
+        if (length <= 0.001f)
+            return null;
+
+        GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        obj.name = name;
+        obj.transform.SetParent(parent, false);
+        obj.transform.position = (start + end) * 0.5f;
+        obj.transform.rotation = Quaternion.FromToRotation(Vector3.up, direction.normalized);
+        obj.transform.localScale = new Vector3(radius, length * 0.5f, radius);
+        SetMaterial(obj, material);
+        RemoveCollider(obj);
+        return obj;
     }
 
     private static GameObject CreatePrimitive(Transform parent, string name, PrimitiveType type, Vector3 position, Vector3 rotation, Vector3 scale, Material material)
@@ -720,11 +1495,13 @@ public static class S01CityEscapeBuilder
             "MetalGate_01", "MetalGate_02",
             "QTE_ConstructionFence", "QTE_Wheelbarrow_Block", "QTE_Wheelbarrow_DelayTrap", "QTE_FallenTree", "QTE_BrokenFence",
             "HacTinhBreakableDelayObstacle",
+            "AmbushDodgeQTE_01", "AmbushDodgeQTE_02",
             "SlowZone_Electric", "SlowZone_Mud", "SlowZone_Debris",
             "ExitTrigger_Test", "Collapse_Crack_Mark", "Collapse_Zone", "Safety_Floor_S01",
-            "S01_ChaseThreat", "S01_ChaseWaypoints", "EnemySpawn_ChaseStart", "S01_EventController",
+            "S01_ChaseThreat", "S01_ChaseWaypoints", "MinionSpawn_ChaseStart", "S01_EventController",
             "TutorialTrigger_Controls", "StoryTrigger_Signal", "WarningTrigger_ChaseStart", "WarningTrigger_Detour",
-            "WarningTrigger_SlowZone", "StoryTrigger_Collapse", "WarningTrigger_Final"
+            "WarningTrigger_SlowZone", "StoryTrigger_Collapse", "WarningTrigger_Final",
+            "Imported_ModelKit_Visuals", "Road_Surface_Dressing", "Cinematic_SetPieces"
         };
 
         foreach (string name in legacyNames)
@@ -778,3 +1555,4 @@ public static class S01CityEscapeBuilder
         }
     }
 }
+
