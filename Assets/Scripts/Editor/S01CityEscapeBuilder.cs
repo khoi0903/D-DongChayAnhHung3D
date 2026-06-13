@@ -18,6 +18,7 @@ public static class S01CityEscapeBuilder
     private const string CardboardBoxesPath = "Assets/Models/Environment/Props/Construction/cardboard_boxes.glb";
     private const string CaseBoxesPath = "Assets/Models/Environment/Props/Construction/case_boxes.glb";
     private const string ConstructionFencePath = "Assets/Models/Environment/Props/Construction/construction_fence.glb";
+    private const string MinionPrefabPath = "Assets/Prefabs/Minion.prefab";
     private const string DumpsterPath = "Assets/Models/Environment/Props/Construction/dumpster_-_4096px2.glb";
     private const string FallenTreePath = "Assets/Models/Environment/Props/Construction/fallen_tree.glb";
     private const string RockDebrisPath = "Assets/Models/Environment/Props/Construction/rock_debris_1.glb";
@@ -72,7 +73,6 @@ public static class S01CityEscapeBuilder
         };
     }
 
-    [MenuItem("Tools/Dong Chay Anh Hung/Rebuild S01 City Escape Zigzag")]
     public static void BuildScene()
     {
         CleanupOldS01();
@@ -112,11 +112,13 @@ public static class S01CityEscapeBuilder
         BuildFallingDebrisArea(concreteMat, woodMat, orangeMat, crackMat);
         BuildMudZone(mudMat, warningMat);
         BuildNarrowPassage(concreteMat, fenceMat);
+        BuildAmbushDodgeQTE(warningMat, orangeMat);
         BuildRouteGuidance(warningMat, orangeMat);
         BuildStoryTriggers();
         BuildCollapse(collapseMat, crackMat, warningMat);
 
-        CreateEmpty(chaseLaneTriggers, "EnemySpawn_ChaseStart", new Vector3(0f, 1f, -8f));
+        CreateEmpty(chaseLaneTriggers, "MinionSpawn_ChaseStart", new Vector3(0f, 1f, -8f));
+        S01ChaseSetupBuilder.CreateS01ChaseThreat();
 
         Selection.activeGameObject = root;
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
@@ -174,15 +176,15 @@ public static class S01CityEscapeBuilder
     {
         RouteSegment[] segments =
         {
-            new RouteSegment("MuseumStreet_Start", new Vector3(0f, 0f, -6f), new Vector3(0f, 0f, 45f), 14f, roadMat),
-            new RouteSegment("ConstructionDetour_East", new Vector3(0f, 0f, 45f), new Vector3(45f, 0f, 45f), 10f, dirtMat),
-            new RouteSegment("ConstructionRun_North", new Vector3(45f, 0f, 45f), new Vector3(45f, 0f, 100f), 8f, dirtMat),
-            new RouteSegment("DebrisRun_West", new Vector3(45f, 0f, 100f), new Vector3(5f, 0f, 100f), 8f, dirtMat),
-            new RouteSegment("MudRun_North", new Vector3(5f, 0f, 100f), new Vector3(5f, 0f, 155f), 8f, dirtMat),
-            new RouteSegment("NarrowRun_West", new Vector3(5f, 0f, 155f), new Vector3(-40f, 0f, 155f), 8f, dirtMat),
-            new RouteSegment("LongEscape_North", new Vector3(-40f, 0f, 155f), new Vector3(-40f, 0f, 215f), 8f, dirtMat),
-            new RouteSegment("LongEscape_East", new Vector3(-40f, 0f, 215f), new Vector3(10f, 0f, 215f), 8f, dirtMat),
-            new RouteSegment("CollapseApproach_North", new Vector3(10f, 0f, 215f), new Vector3(10f, 0f, 265f), 8f, dirtMat)
+            new RouteSegment("MuseumStreet_Start", new Vector3(0f, 0f, -6f), new Vector3(0f, 0f, 45f), 18f, roadMat),
+            new RouteSegment("ConstructionDetour_East", new Vector3(0f, 0f, 45f), new Vector3(45f, 0f, 45f), 14.5f, dirtMat),
+            new RouteSegment("ConstructionRun_North", new Vector3(45f, 0f, 45f), new Vector3(45f, 0f, 100f), 14.5f, dirtMat),
+            new RouteSegment("DebrisRun_West", new Vector3(45f, 0f, 100f), new Vector3(5f, 0f, 100f), 12.5f, dirtMat),
+            new RouteSegment("MudRun_North", new Vector3(5f, 0f, 100f), new Vector3(5f, 0f, 155f), 13.5f, dirtMat),
+            new RouteSegment("NarrowRun_West", new Vector3(5f, 0f, 155f), new Vector3(-40f, 0f, 155f), 12.5f, dirtMat),
+            new RouteSegment("LongEscape_North", new Vector3(-40f, 0f, 155f), new Vector3(-40f, 0f, 215f), 12.5f, dirtMat),
+            new RouteSegment("LongEscape_East", new Vector3(-40f, 0f, 215f), new Vector3(10f, 0f, 215f), 14.5f, dirtMat),
+            new RouteSegment("CollapseApproach_North", new Vector3(10f, 0f, 215f), new Vector3(10f, 0f, 265f), 13.5f, dirtMat)
         };
 
         foreach (RouteSegment segment in segments)
@@ -773,6 +775,8 @@ public static class S01CityEscapeBuilder
     {
         CreateConcreteBlock(new Vector3(42f, 1f, 91f), concreteMat);
         CreateConcreteBlock(new Vector3(48f, 1f, 91f), concreteMat);
+        CreateCube(routeBarriers, "ConstructionFence_LeftSideBlocker", new Vector3(40.4f, 1.1f, 91f), Vector3.zero, new Vector3(5.2f, 2.2f, 1.2f), concreteMat);
+        CreateCube(routeBarriers, "ConstructionFence_RightSideBlocker", new Vector3(49.6f, 1.1f, 91f), Vector3.zero, new Vector3(5.2f, 2.2f, 1.2f), concreteMat);
 
         GameObject fence = CreateParent(interactiveObstacles, "QTE_ConstructionFence", new Vector3(45f, 0f, 91f), Vector3.zero);
         CreateChildCube(fence.transform, "Fence_Panel", new Vector3(0f, 1.1f, 0f), new Vector3(3.8f, 2.2f, 0.2f), fenceMat);
@@ -827,6 +831,117 @@ public static class S01CityEscapeBuilder
         CreateWarningTrigger("NarrowPassage_ConstructionGap", new Vector3(-5f, 1.2f, 155f), new Vector3(8f, 3f, 5f), "Lách qua khe hẹp phía trước!", false);
         CreateGuideBeacon(new Vector3(-8f, 0f, 155f), fenceMat);
         CreateGuideBeacon(new Vector3(-28f, 0f, 155f), fenceMat);
+    }
+
+    private static void BuildAmbushDodgeQTE(Material warningMat, Material orangeMat)
+    {
+        CreateAmbushDodgeTrigger(
+            "AmbushDodgeQTE_01",
+            new Vector3(32f, 1.2f, 100f),
+            new Vector3(8f, 3f, 7f),
+            new Vector3(0f, 1f, -9f),
+            new Vector3(0f, 1f, 9f),
+            "Hắc Tinh lao ra từ hai bên! Nhấn E để né!",
+            "Né được rồi! Đừng dừng lại!",
+            warningMat,
+            orangeMat);
+
+        CreateAmbushDodgeTrigger(
+            "AmbushDodgeQTE_02",
+            new Vector3(-25f, 1.2f, 155f),
+            new Vector3(8f, 3f, 6f),
+            new Vector3(0f, 1f, -8f),
+            new Vector3(0f, 1f, 8f),
+            "Nó vòng qua khe hẹp! Nhấn E để lách người né!",
+            "Thoát sát nút! Chạy tới vùng sụp!",
+            warningMat,
+            orangeMat);
+    }
+
+    private static void CreateAmbushDodgeTrigger(string name, Vector3 position, Vector3 size, Vector3 leftOffset, Vector3 rightOffset, string warningMessage, string successMessage, Material warningMat, Material orangeMat)
+    {
+        GameObject trigger = CreateCube(dynamicZones, name, position, Vector3.zero, size, null);
+        Renderer renderer = trigger.GetComponent<Renderer>();
+        if (renderer != null)
+            renderer.enabled = false;
+
+        BoxCollider collider = trigger.GetComponent<BoxCollider>();
+        collider.isTrigger = true;
+
+        AddAmbushDodgeComponent(trigger, leftOffset, rightOffset, warningMessage, successMessage);
+
+        CreateVisualCube(dynamicZones, name + "_Shadow_Left", position + leftOffset + new Vector3(0f, -0.84f, 0f), Vector3.zero, new Vector3(2.4f, 0.04f, 3.2f), orangeMat);
+        CreateVisualCube(dynamicZones, name + "_Shadow_Right", position + rightOffset + new Vector3(0f, -0.84f, 0f), Vector3.zero, new Vector3(2.4f, 0.04f, 3.2f), orangeMat);
+        CreateGuideBeacon(position + new Vector3(-3.2f, -1.2f, 0f), warningMat);
+        CreateGuideBeacon(position + new Vector3(3.2f, -1.2f, 0f), warningMat);
+    }
+
+    private static void AddAmbushDodgeComponent(GameObject trigger, Vector3 leftOffset, Vector3 rightOffset, string warningMessage, string successMessage)
+    {
+        Type ambushType = Type.GetType("S01AmbushDodgeQTE, Assembly-CSharp");
+        if (ambushType == null)
+        {
+            Debug.LogWarning("S01AmbushDodgeQTE is not compiled yet. Let Unity compile scripts, then rebuild S01.");
+            return;
+        }
+
+        Component ambush = trigger.AddComponent(ambushType);
+        SetPublicField(ambush, "player", FindPlayerTransform());
+        SetPublicField(ambush, "warningUI", warningUI);
+        SetPublicField(ambush, "minionPrefab", AssetDatabase.LoadAssetAtPath<GameObject>(MinionPrefabPath));
+        SetPublicField(ambush, "leftStartOffset", leftOffset);
+        SetPublicField(ambush, "rightStartOffset", rightOffset);
+        SetPublicField(ambush, "attackTargetOffset", Vector3.zero);
+        SetPublicField(ambush, "qteDuration", 1f);
+        SetPublicField(ambush, "slowMotionTimeScale", 0.28f);
+        SetPublicField(ambush, "lungeDistancePastPlayer", 3.5f);
+        SetPublicField(ambush, "ambushMinionsJoinChaseOnDodge", true);
+        SetPublicField(ambush, "joinedMinionMoveSpeed", 5.5f);
+        SetPublicField(ambush, "joinedMinionChaseRange", 120f);
+        SetPublicField(ambush, "joinedMinionAttackGrace", 1.2f);
+        SetPublicField(ambush, "joinBehindPlayerDistance", 7f);
+        SetPublicField(ambush, "joinSideSpacing", 1.2f);
+        SetPublicField(ambush, "joinColliderDelay", 0.35f);
+        SetPublicField(ambush, "attackFeedbackPause", 0.85f);
+        SetPublicField(ambush, "failedDodgeDamage", 20);
+        SetPublicField(ambush, "warningMessage", warningMessage);
+        SetPublicField(ambush, "successMessage", successMessage);
+        SetPublicField(ambush, "failMessage", "Bạn né không kịp. Hắc Tinh đã bắt được bạn!");
+    }
+
+    public static void ConfigureExistingAmbushMinions()
+    {
+        GameObject minionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MinionPrefabPath);
+        S01AmbushDodgeQTE[] ambushes = UnityEngine.Object.FindObjectsByType<S01AmbushDodgeQTE>(FindObjectsInactive.Include);
+
+        foreach (S01AmbushDodgeQTE ambush in ambushes)
+        {
+            ambush.minionPrefab = minionPrefab;
+            ambush.ambushMinionsJoinChaseOnDodge = true;
+            ambush.joinedMinionMoveSpeed = 5.5f;
+            ambush.joinedMinionChaseRange = 120f;
+            ambush.joinedMinionAttackGrace = 1.2f;
+            ambush.joinBehindPlayerDistance = 7f;
+            ambush.joinSideSpacing = 1.2f;
+            ambush.joinColliderDelay = 0.35f;
+            ambush.attackFeedbackPause = 0.85f;
+            ambush.failedDodgeDamage = 20;
+            EditorUtility.SetDirty(ambush);
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
+        Debug.Log("S01CityEscapeBuilder: configured " + ambushes.Length + " ambush trigger(s) to spawn Minion prefab and join chase after missed attacks.");
+    }
+
+    private static void SetPublicField(Component target, string fieldName, object value)
+    {
+        if (target == null)
+            return;
+
+        System.Reflection.FieldInfo field = target.GetType().GetField(fieldName);
+        if (field != null)
+            field.SetValue(target, value);
     }
 
     private static void BuildRouteGuidance(Material warningMat, Material orangeMat)
@@ -892,7 +1007,10 @@ public static class S01CityEscapeBuilder
         {
             SceneTransitionTrigger transition = exit.AddComponent<SceneTransitionTrigger>();
             transition.nextSceneName = "S02_UndergroundCave";
-            transition.delayBeforeLoad = 1.5f;
+            transition.delayBeforeLoad = 0.1f;
+            transition.waitForGroundCollapseSound = true;
+            transition.maxGroundCollapseWaitTime = 1.2f;
+            transition.postSoundLoadPadding = 0f;
         }
         else
         {
@@ -1082,6 +1200,15 @@ public static class S01CityEscapeBuilder
             controller.moveSpeed = 5f;
             controller.runSpeed = 8f;
         }
+    }
+
+    private static Transform FindPlayerTransform()
+    {
+        GameObject player = GameObject.Find("Player");
+        if (player == null)
+            player = GameObject.FindGameObjectWithTag("Player");
+
+        return player != null ? player.transform : null;
     }
 
     private static void SetupUI()
@@ -1368,9 +1495,10 @@ public static class S01CityEscapeBuilder
             "MetalGate_01", "MetalGate_02",
             "QTE_ConstructionFence", "QTE_Wheelbarrow_Block", "QTE_Wheelbarrow_DelayTrap", "QTE_FallenTree", "QTE_BrokenFence",
             "HacTinhBreakableDelayObstacle",
+            "AmbushDodgeQTE_01", "AmbushDodgeQTE_02",
             "SlowZone_Electric", "SlowZone_Mud", "SlowZone_Debris",
             "ExitTrigger_Test", "Collapse_Crack_Mark", "Collapse_Zone", "Safety_Floor_S01",
-            "S01_ChaseThreat", "S01_ChaseWaypoints", "EnemySpawn_ChaseStart", "S01_EventController",
+            "S01_ChaseThreat", "S01_ChaseWaypoints", "MinionSpawn_ChaseStart", "S01_EventController",
             "TutorialTrigger_Controls", "StoryTrigger_Signal", "WarningTrigger_ChaseStart", "WarningTrigger_Detour",
             "WarningTrigger_SlowZone", "StoryTrigger_Collapse", "WarningTrigger_Final",
             "Imported_ModelKit_Visuals", "Road_Surface_Dressing", "Cinematic_SetPieces"
@@ -1427,3 +1555,4 @@ public static class S01CityEscapeBuilder
         }
     }
 }
+

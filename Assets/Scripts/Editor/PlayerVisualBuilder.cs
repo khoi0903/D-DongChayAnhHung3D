@@ -16,7 +16,6 @@ public static class PlayerVisualBuilder
     private const float TargetVisualHeight = 1.75f;
     private const float GroundClearance = 0.02f;
 
-    [MenuItem("Tools/Dong Chay Anh Hung/Create Văn An Player Visual")]
     public static void CreatePlayerVisual()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -88,7 +87,6 @@ public static class PlayerVisualBuilder
         Debug.Log("Created stylized Văn An student visual on Player.");
     }
 
-    [MenuItem("Tools/Dong Chay Anh Hung/Prepare Player Visual For Animation")]
     public static void PreparePlayerVisualForAnimation()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -135,7 +133,6 @@ public static class PlayerVisualBuilder
         Debug.Log("Prepared clean Humanoid Player visual. Assign a valid locomotion Animator Controller when ready.");
     }
 
-    [MenuItem("Tools/Dong Chay Anh Hung/Apply Văn An Player Colors")]
     public static void ApplyPlayerColors()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

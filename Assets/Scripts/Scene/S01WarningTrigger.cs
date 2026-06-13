@@ -25,6 +25,15 @@ public class S01WarningTrigger : MonoBehaviour
 
         triggered = true;
 
+        S01ChaseIntroCutscene chaseIntroCutscene = GetComponent<S01ChaseIntroCutscene>();
+        if (chaseIntroCutscene != null)
+        {
+            if (chaseIntroCutscene.TryPlay(other.transform.root) || chaseIntroCutscene.HasPlayed)
+                return;
+        }
+
+        S01Soundscape.PlayWarningCue(name, message);
+
         if (warningUI == null)
             return;
 

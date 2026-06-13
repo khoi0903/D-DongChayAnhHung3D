@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class TimeRiftBuilder : MonoBehaviour
 {
-    [MenuItem("Tools/Dong Chay Anh Hung/Create Time Rift Portal")]
     public static void CreateTimeRift()
     {
         GameObject oldRift = GameObject.Find("TimeRift");

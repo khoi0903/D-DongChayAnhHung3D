@@ -31,7 +31,7 @@ public class S02CutsceneController : MonoBehaviour
     private bool savedPlayerControllerEnabled;
     private bool savedThirdPersonCameraEnabled;
     private bool skipRequested;
-    private readonly List<EnemyChase3D> pausedEnemies = new List<EnemyChase3D>();
+    private readonly List<MinionChase3D> pausedEnemies = new List<MinionChase3D>();
 
     public IEnumerator PlayIntro()
     {
@@ -247,8 +247,8 @@ public class S02CutsceneController : MonoBehaviour
     {
         pausedEnemies.Clear();
 
-        EnemyChase3D[] enemies = FindObjectsByType<EnemyChase3D>(FindObjectsInactive.Exclude);
-        foreach (EnemyChase3D enemy in enemies)
+        MinionChase3D[] enemies = FindObjectsByType<MinionChase3D>(FindObjectsInactive.Exclude);
+        foreach (MinionChase3D enemy in enemies)
         {
             if (enemy == null || !enemy.enabled)
                 continue;
@@ -260,7 +260,7 @@ public class S02CutsceneController : MonoBehaviour
 
     private void RestorePausedEnemies()
     {
-        foreach (EnemyChase3D enemy in pausedEnemies)
+        foreach (MinionChase3D enemy in pausedEnemies)
         {
             if (enemy != null)
                 enemy.enabled = true;

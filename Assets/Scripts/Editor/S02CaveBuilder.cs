@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -11,7 +11,6 @@ public static class S02CaveBuilder
     private const string RootName = "S02_UndergroundCave_Generated";
     private const float RiftZ = 166f;
 
-    [MenuItem("Tools/Dong Chay Anh Hung/Rebuild S02 Underground Cave")]
     public static void BuildScene()
     {
         DeleteOldGeneratedObjects();
@@ -182,9 +181,9 @@ public static class S02CaveBuilder
         CreateArrowOnFloor(root, "Pressure_Route_Glow_A", new Vector3(7f, 0.31f, 122f), -14f, glowMat);
         CreateArrowOnFloor(root, "Pressure_Route_Glow_B", new Vector3(-3.5f, 0.31f, 145f), 14f, glowMat);
 
-        CreateMarker(root, "CaveEnemySpawn_01", new Vector3(1f, 2.5f, 88f));
-        CreateMarker(root, "CaveEnemySpawn_02", new Vector3(-5.5f, 1f, 92f));
-        CreateMarker(root, "CaveEnemySpawn_03", new Vector3(6f, 1f, 95f));
+        CreateMarker(root, "CaveMinionSpawn_01", new Vector3(1f, 2.5f, 88f));
+        CreateMarker(root, "CaveMinionSpawn_02", new Vector3(-5.5f, 1f, 92f));
+        CreateMarker(root, "CaveMinionSpawn_03", new Vector3(6f, 1f, 95f));
 
         CreateS02WarningTrigger(root, "UnstableGround_Zone_01", new Vector3(7f, 1.5f, 122f), new Vector3(16f, 3f, 7f), "Nền đá đang nứt. Đừng đứng lại!", false, warningUI);
         CreateS02WarningTrigger(root, "UnstableGround_Zone_02", new Vector3(-4f, 1.5f, 142f), new Vector3(16f, 3f, 7f), "Ánh sáng xanh đang dẫn về phía trước.", true, warningUI);
@@ -259,17 +258,17 @@ public static class S02CaveBuilder
         cutscene.mainCamera = mainCamera;
         cutscene.thirdPersonCamera = mainCamera != null ? mainCamera.GetComponent<ThirdPersonCamera>() : null;
 
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/BlackStarEnemy.prefab");
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Minion.prefab");
         if (prefab != null)
-            controller.blackStarEnemyPrefab = prefab;
+            controller.minionPrefab = prefab;
         else
-            Debug.LogWarning("S02CaveBuilder: Assets/Prefabs/BlackStarEnemy.prefab not found. S02 will still run without spawning enemies.");
+            Debug.LogWarning("S02CaveBuilder: Assets/Prefabs/Minion.prefab not found. S02 will still run without spawning minions.");
 
         controller.enemySpawnPoints = new[]
         {
-            GameObject.Find("CaveEnemySpawn_01")?.transform,
-            GameObject.Find("CaveEnemySpawn_02")?.transform,
-            GameObject.Find("CaveEnemySpawn_03")?.transform
+            GameObject.Find("CaveMinionSpawn_01")?.transform,
+            GameObject.Find("CaveMinionSpawn_02")?.transform,
+            GameObject.Find("CaveMinionSpawn_03")?.transform
         };
 
         return controller;
@@ -683,17 +682,17 @@ public static class S02CaveBuilder
             "S02CaveEventController",
             "S02_TimeRift_Core",
             "S02_TimeRift_Ring",
-            "S02_BlackStarEnemy",
+            "S02_Minion",
             "S02_CutsceneFade",
             "S02_CutsceneSkipPrompt",
             "S02_CutsceneSubtitle",
-            "EnemySpawner",
-            "EnemySpawnPoint_01",
-            "EnemySpawnPoint_02",
-            "EnemySpawnPoint_03",
-            "CaveEnemySpawn_01",
-            "CaveEnemySpawn_02",
-            "CaveEnemySpawn_03",
+            "MinionSpawner",
+            "MinionSpawnPoint_01",
+            "MinionSpawnPoint_02",
+            "MinionSpawnPoint_03",
+            "CaveMinionSpawn_01",
+            "CaveMinionSpawn_02",
+            "CaveMinionSpawn_03",
             "ExitTrigger_Test",
             "CollapseHole",
             "Collapse_Hole",
@@ -720,7 +719,7 @@ public static class S02CaveBuilder
         foreach (string legacyName in legacyNames)
             DeleteAllSceneObjectsNamed(legacyName);
 
-        DeleteAllSceneObjectsWithPrefix("S02_BlackStarEnemy");
+        DeleteAllSceneObjectsWithPrefix("S02_Minion");
     }
 
     private static void DeleteAllSceneObjectsNamed(string objectName)
@@ -772,3 +771,4 @@ public static class S02CaveBuilder
         }
     }
 }
+

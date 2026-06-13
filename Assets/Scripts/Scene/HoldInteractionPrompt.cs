@@ -13,6 +13,7 @@ public class HoldInteractionPrompt : MonoBehaviour
     public float holdDuration = 1.5f;
     public float releaseResetSpeed = 3f;
     public bool triggerOnce = true;
+    public bool playPlayerPushAnimation = true;
 
     public Transform targetTransform;
     public Vector3 completedLocalMoveOffset;
@@ -29,6 +30,8 @@ public class HoldInteractionPrompt : MonoBehaviour
     private bool completed;
     private bool promptShown;
     private float holdProgress;
+    private bool pushAnimationStarted;
+    private PlayerAnimatorDriver playerAnimatorDriver;
 
     private void Start()
     {
@@ -48,6 +51,7 @@ public class HoldInteractionPrompt : MonoBehaviour
 
         if (Input.GetKey(KeyCode.E))
         {
+            PlayPushAnimationOnce();
             holdProgress += Time.deltaTime;
             ShowProgress();
 
@@ -56,6 +60,7 @@ public class HoldInteractionPrompt : MonoBehaviour
         }
         else
         {
+            StopPushAnimation();
             holdProgress = Mathf.MoveTowards(holdProgress, 0f, releaseResetSpeed * Time.deltaTime);
             ShowPrompt();
         }
@@ -78,6 +83,7 @@ public class HoldInteractionPrompt : MonoBehaviour
 
         playerInRange = false;
         holdProgress = 0f;
+        StopPushAnimation();
         HidePrompt();
     }
 
@@ -88,6 +94,7 @@ public class HoldInteractionPrompt : MonoBehaviour
 
         completed = true;
         HidePrompt();
+        StopPushAnimation();
 
         if (activateOnComplete != null)
             activateOnComplete.SetActive(true);
@@ -177,6 +184,9 @@ public class HoldInteractionPrompt : MonoBehaviour
                 player = playerObject.transform;
         }
 
+        if (playerAnimatorDriver == null && player != null)
+            playerAnimatorDriver = player.GetComponent<PlayerAnimatorDriver>() ?? player.GetComponentInParent<PlayerAnimatorDriver>();
+
         if (interactionText == null)
             interactionText = FindTextInScene("InteractionText");
 
@@ -199,5 +209,31 @@ public class HoldInteractionPrompt : MonoBehaviour
     private bool IsPlayer(Collider other)
     {
         return other.CompareTag("Player") || other.transform.root.CompareTag("Player");
+    }
+
+    private void PlayPushAnimationOnce()
+    {
+        if (!playPlayerPushAnimation || pushAnimationStarted)
+            return;
+
+        FindReferencesIfNeeded();
+        if (playerAnimatorDriver == null)
+            return;
+
+        playerAnimatorDriver.PlayPush();
+        S01Soundscape.PlayDebrisPush();
+        pushAnimationStarted = true;
+    }
+
+    private void StopPushAnimation()
+    {
+        if (!pushAnimationStarted)
+            return;
+
+        FindReferencesIfNeeded();
+        if (playerAnimatorDriver != null)
+            playerAnimatorDriver.StopPush();
+
+        pushAnimationStarted = false;
     }
 }

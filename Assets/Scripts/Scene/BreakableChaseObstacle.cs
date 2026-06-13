@@ -32,6 +32,7 @@ public class BreakableChaseObstacle : MonoBehaviour
 
         triggered = true;
         Debug.Log("Hắc Tinh hit delay obstacle.");
+        S01Soundscape.PlayDebrisPush();
         StartCoroutine(BreakAndRelease(threat));
     }
 

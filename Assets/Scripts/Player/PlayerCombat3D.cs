@@ -43,7 +43,7 @@ public class PlayerCombat3D : MonoBehaviour
             if (enemy == null)
                 continue;
 
-            EnemyHealth3D enemyHealth = enemy.GetComponent<EnemyHealth3D>();
+            MinionHealth3D enemyHealth = enemy.GetComponent<MinionHealth3D>();
             if (enemyHealth == null || enemyHealth.IsDead)
                 continue;
 
@@ -56,7 +56,13 @@ public class PlayerCombat3D : MonoBehaviour
 
             enemyHealth.TakeDamage(damage);
 
-            EnemyChase3D chase = enemy.GetComponent<EnemyChase3D>();
+            if (enemyHealth.IsDead)
+            {
+                hitCount++;
+                continue;
+            }
+
+            MinionChase3D chase = enemy.GetComponent<MinionChase3D>();
             if (chase != null)
             {
                 Vector3 knockbackDirection = distance > 0.1f ? toEnemy.normalized : attackDirection;

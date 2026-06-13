@@ -17,7 +17,7 @@ public class S02CaveEventController : MonoBehaviour
     public S01WarningTextUI warningUI;
     public TMP_Text interactionText;
     public TMP_Text progressText;
-    public GameObject blackStarEnemyPrefab;
+    public GameObject minionPrefab;
     public Transform[] enemySpawnPoints;
     public Transform timeRift;
     public S02CutsceneController cutsceneController;
@@ -38,7 +38,7 @@ public class S02CaveEventController : MonoBehaviour
     private bool warnedMissingEnemyPrefab;
     private bool warnedMissingInteractionText;
     private float stabilizationStartTime;
-    private float nextEnemySpawnTime;
+    private float nextMinionSpawnTime;
 
     private void Start()
     {
@@ -190,7 +190,7 @@ public class S02CaveEventController : MonoBehaviour
     {
         stabilizationRunning = true;
         stabilizationStartTime = Time.time;
-        nextEnemySpawnTime = Time.time;
+        nextMinionSpawnTime = Time.time;
         ShowProgressText("Ổn định khe nứt: 0%");
         Debug.Log("S02 TimeRift stabilization started.");
     }
@@ -203,12 +203,12 @@ public class S02CaveEventController : MonoBehaviour
 
         ShowProgressText("Ổn định khe nứt: " + percent + "%");
 
-        if (Time.time >= nextEnemySpawnTime)
+        if (Time.time >= nextMinionSpawnTime)
         {
             if (GetActivePressureEnemyCount() < maxActiveEnemies)
                 SpawnEnemyAtIndex(Random.Range(0, GetSafeSpawnCount()), true);
 
-            nextEnemySpawnTime = Time.time + Mathf.Max(1f, enemySpawnInterval);
+            nextMinionSpawnTime = Time.time + Mathf.Max(1f, enemySpawnInterval);
         }
 
         if (!overloadWarningShown && normalized >= 0.58f)
@@ -265,8 +265,8 @@ public class S02CaveEventController : MonoBehaviour
 
     private void StopAllPressureEnemiesForEnding()
     {
-        EnemyChase3D[] enemies = FindObjectsByType<EnemyChase3D>(FindObjectsInactive.Exclude);
-        foreach (EnemyChase3D enemy in enemies)
+        MinionChase3D[] enemies = FindObjectsByType<MinionChase3D>(FindObjectsInactive.Exclude);
+        foreach (MinionChase3D enemy in enemies)
         {
             if (enemy == null || !IsS02PressureEnemy(enemy.gameObject))
                 continue;
@@ -292,17 +292,17 @@ public class S02CaveEventController : MonoBehaviour
     private bool IsS02PressureEnemy(GameObject enemy)
     {
         return enemy != null &&
-               (enemy.name.StartsWith("S02_BlackStarEnemy") || enemy.CompareTag("Enemy"));
+               (enemy.name.StartsWith("S02_Minion") || enemy.CompareTag("Enemy"));
     }
 
     private void SpawnEnemyAtIndex(int spawnIndex, bool resonancePhase)
     {
-        if (blackStarEnemyPrefab == null)
+        if (minionPrefab == null)
         {
             if (!warnedMissingEnemyPrefab)
             {
                 warnedMissingEnemyPrefab = true;
-                Debug.LogWarning("BlackStarEnemy prefab is missing. S02 continues without pressure enemies.");
+                Debug.LogWarning("Minion prefab is missing. S02 continues without pressure enemies.");
             }
 
             return;
@@ -311,20 +311,22 @@ public class S02CaveEventController : MonoBehaviour
         Transform spawnPoint = GetSpawnPointBehindPlayer(spawnIndex);
         Vector3 spawnPosition = GetSafeSpawnPosition(spawnPoint);
         Quaternion spawnRotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
-        GameObject enemy = Instantiate(blackStarEnemyPrefab, spawnPosition, spawnRotation);
-        enemy.name = "S02_BlackStarEnemy";
+        GameObject enemy = Instantiate(minionPrefab, spawnPosition, spawnRotation);
+        enemy.name = "S02_Minion";
         enemy.tag = "Enemy";
+        EnsureEnemyCollider(enemy);
 
-        EnemyHealth3D health = enemy.GetComponent<EnemyHealth3D>();
+        MinionHealth3D health = enemy.GetComponent<MinionHealth3D>();
         if (health == null)
-            health = enemy.AddComponent<EnemyHealth3D>();
+            health = enemy.AddComponent<MinionHealth3D>();
 
         health.maxHP = resonancePhase ? ResonanceEnemyHP : PreResonanceThreatHP;
         health.currentHP = health.maxHP;
+        health.deathDelay = 0.35f;
 
-        EnemyChase3D chase = enemy.GetComponent<EnemyChase3D>();
+        MinionChase3D chase = enemy.GetComponent<MinionChase3D>();
         if (chase == null)
-            chase = enemy.AddComponent<EnemyChase3D>();
+            chase = enemy.AddComponent<MinionChase3D>();
 
         if (player != null)
             chase.target = player;
@@ -337,6 +339,21 @@ public class S02CaveEventController : MonoBehaviour
         ForceEnemyAnimation(enemy);
     }
 
+    private void EnsureEnemyCollider(GameObject enemy)
+    {
+        if (enemy == null)
+            return;
+
+        CapsuleCollider capsule = enemy.GetComponent<CapsuleCollider>();
+        if (capsule == null)
+            capsule = enemy.AddComponent<CapsuleCollider>();
+
+        capsule.isTrigger = false;
+        capsule.center = new Vector3(0f, 1.05f, 0f);
+        capsule.radius = 0.45f;
+        capsule.height = 2.1f;
+    }
+
     private int GetActivePressureEnemyCount()
     {
         GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
@@ -344,7 +361,7 @@ public class S02CaveEventController : MonoBehaviour
 
         foreach (GameObject enemy in enemies)
         {
-            if (enemy != null && enemy.name.StartsWith("S02_BlackStarEnemy"))
+            if (enemy != null && enemy.name.StartsWith("S02_Minion"))
                 count++;
         }
 
@@ -403,22 +420,22 @@ public class S02CaveEventController : MonoBehaviour
         GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
         foreach (GameObject enemy in enemies)
         {
-            if (enemy == null || !enemy.name.StartsWith("S02_BlackStarEnemy"))
+            if (enemy == null || !enemy.name.StartsWith("S02_Minion"))
                 continue;
 
             ForceEnemyAnimation(enemy);
 
-            EnemyHealth3D health = enemy.GetComponent<EnemyHealth3D>();
+            MinionHealth3D health = enemy.GetComponent<MinionHealth3D>();
             if (health == null)
-                health = enemy.AddComponent<EnemyHealth3D>();
+                health = enemy.AddComponent<MinionHealth3D>();
 
             health.maxHP = ResonanceEnemyHP;
             health.currentHP = ResonanceEnemyHP;
             health.destroyOnDeath = true;
 
-            EnemyChase3D chase = enemy.GetComponent<EnemyChase3D>();
+            MinionChase3D chase = enemy.GetComponent<MinionChase3D>();
             if (chase == null)
-                chase = enemy.AddComponent<EnemyChase3D>();
+                chase = enemy.AddComponent<MinionChase3D>();
 
             if (player != null)
                 chase.target = player;
@@ -430,7 +447,7 @@ public class S02CaveEventController : MonoBehaviour
             chase.attackCooldown = ResonanceEnemyAttackCooldown;
         }
 
-        Debug.Log("S02 resonance started. Active BlackStar enemies normalized to " + ResonanceEnemyHP + " HP.");
+        Debug.Log("S02 resonance started. Active Minions normalized to " + ResonanceEnemyHP + " HP.");
     }
 
     private void ForceEnemyAnimation(GameObject enemy)
@@ -438,7 +455,7 @@ public class S02CaveEventController : MonoBehaviour
         if (enemy == null)
             return;
 
-        EnemyChase3D chase = enemy.GetComponent<EnemyChase3D>();
+        MinionChase3D chase = enemy.GetComponent<MinionChase3D>();
         if (chase != null)
         {
             chase.ForceVisualAnimation();
@@ -461,7 +478,7 @@ public class S02CaveEventController : MonoBehaviour
             {
                 animator.Rebind();
                 animator.Update(0f);
-                animator.Play("Walking", 0, Random.value);
+                animator.Play("Run", 0, Random.value);
             }
         }
 
@@ -471,17 +488,17 @@ public class S02CaveEventController : MonoBehaviour
 
     private void CleanupSceneStartRuntimeState()
     {
-        EnemyChase3D[] enemies = FindObjectsByType<EnemyChase3D>(FindObjectsInactive.Exclude);
-        foreach (EnemyChase3D enemy in enemies)
+        MinionChase3D[] enemies = FindObjectsByType<MinionChase3D>(FindObjectsInactive.Exclude);
+        foreach (MinionChase3D enemy in enemies)
         {
-            if (enemy == null || !enemy.name.StartsWith("S02_BlackStarEnemy"))
+            if (enemy == null || !enemy.name.StartsWith("S02_Minion"))
                 continue;
 
             Destroy(enemy.gameObject);
         }
 
-        EnemySpawner3D[] spawners = FindObjectsByType<EnemySpawner3D>(FindObjectsInactive.Exclude);
-        foreach (EnemySpawner3D spawner in spawners)
+        MinionSpawner3D[] spawners = FindObjectsByType<MinionSpawner3D>(FindObjectsInactive.Exclude);
+        foreach (MinionSpawner3D spawner in spawners)
         {
             if (spawner != null)
                 spawner.enabled = false;
