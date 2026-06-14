@@ -4,9 +4,8 @@ using System.Collections.Generic;
 public class SlowZone : MonoBehaviour
 {
     public float slowMoveSpeed = 1.5f;
-    public float slowRunSpeed = 2.2f;
 
-    private readonly Dictionary<PlayerController3D, SpeedSnapshot> originalSpeeds = new Dictionary<PlayerController3D, SpeedSnapshot>();
+    private readonly Dictionary<PlayerController3D, float> originalSpeeds = new Dictionary<PlayerController3D, float>();
 
     private void OnTriggerEnter(Collider other)
     {
@@ -15,10 +14,9 @@ public class SlowZone : MonoBehaviour
         if (player == null || originalSpeeds.ContainsKey(player))
             return;
 
-        originalSpeeds.Add(player, new SpeedSnapshot(player.moveSpeed, player.runSpeed));
+        originalSpeeds.Add(player, player.moveSpeed);
 
         player.moveSpeed = slowMoveSpeed;
-        player.runSpeed = slowRunSpeed;
 
         Debug.Log("Entered SlowZone");
     }
@@ -27,11 +25,10 @@ public class SlowZone : MonoBehaviour
     {
         PlayerController3D player = GetPlayerController(other);
 
-        if (player == null || !originalSpeeds.TryGetValue(player, out SpeedSnapshot snapshot))
+        if (player == null || !originalSpeeds.TryGetValue(player, out float originalSpeed))
             return;
 
-        player.moveSpeed = snapshot.moveSpeed;
-        player.runSpeed = snapshot.runSpeed;
+        player.moveSpeed = originalSpeed;
         originalSpeeds.Remove(player);
 
         Debug.Log("Exited SlowZone");
@@ -47,17 +44,5 @@ public class SlowZone : MonoBehaviour
             player = other.GetComponentInParent<PlayerController3D>();
 
         return player;
-    }
-
-    private struct SpeedSnapshot
-    {
-        public readonly float moveSpeed;
-        public readonly float runSpeed;
-
-        public SpeedSnapshot(float moveSpeed, float runSpeed)
-        {
-            this.moveSpeed = moveSpeed;
-            this.runSpeed = runSpeed;
-        }
     }
 }

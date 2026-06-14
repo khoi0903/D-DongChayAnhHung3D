@@ -57,13 +57,23 @@ public class EscapeDoorQTE : MonoBehaviour
         if (player == null)
             return;
 
+        PlayerController3D playerCtrl = player.GetComponent<PlayerController3D>();
+        if (playerCtrl != null && playerCtrl.InputLocked)
+        {
+            HideText();
+            return;
+        }
+
         float distance = Vector3.Distance(transform.position, player.position);
 
         if (distance <= interactRange)
         {
             ShowText();
 
-            if (Input.GetKeyDown(KeyCode.E))
+            InputSettingsManager inputSettings = FindAnyObjectByType<InputSettingsManager>();
+            KeyCode interactKey = (inputSettings != null && inputSettings.Keyboard != null) ? inputSettings.Keyboard.interact : KeyCode.E;
+
+            if (Input.GetKeyDown(interactKey))
             {
                 currentPressCount++;
 

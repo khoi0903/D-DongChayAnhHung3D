@@ -817,7 +817,6 @@ public static class S01CityEscapeBuilder
         collider.isTrigger = true;
         SlowZone slowZone = mud.AddComponent<SlowZone>();
         slowZone.slowMoveSpeed = 1.5f;
-        slowZone.slowRunSpeed = 2.2f;
 
         CreateWarningTrigger("WarningTrigger_SlowZone", new Vector3(5f, 1.2f, 119f), new Vector3(8f, 3f, 5f), "Bùn lầy làm bạn di chuyển chậm lại!", false);
         CreateGuideBeacon(new Vector3(8.3f, 0f, 123f), warningMat);
@@ -1197,8 +1196,7 @@ public static class S01CityEscapeBuilder
         PlayerController3D controller = player.GetComponent<PlayerController3D>();
         if (controller != null)
         {
-            controller.moveSpeed = 5f;
-            controller.runSpeed = 8f;
+            controller.moveSpeed = 8f;
         }
     }
 

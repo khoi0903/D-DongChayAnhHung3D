@@ -405,10 +405,11 @@ public static class AnhThuPlayerSetupBuilder
 
             camera.fixedAngle = true;
             camera.fixedYaw = 45f;
-            camera.fixedPitch = 45f;
+            camera.fixedPitch = 58f;
             camera.lockCursor = false;
-            camera.distance = Mathf.Max(camera.distance, 8f);
-            camera.height = Mathf.Max(camera.height, 2.5f);
+            camera.distance = 4.8f;
+            camera.height = 4f;
+            camera.smoothSpeed = 8f;
             EditorUtility.SetDirty(camera);
             changed = true;
         }

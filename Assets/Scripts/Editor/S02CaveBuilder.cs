@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -83,8 +83,7 @@ public static class S02CaveBuilder
         PlayerController3D controller = player.GetComponent<PlayerController3D>();
         if (controller != null)
         {
-            controller.moveSpeed = 5f;
-            controller.runSpeed = 8f;
+            controller.moveSpeed = 8f;
         }
 
         return player.transform;

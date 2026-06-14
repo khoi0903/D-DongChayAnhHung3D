@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1001 &522223545
+--- !u!1001 &649494885
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -204,10 +204,10 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: dc20f2f61a61c5c4a93f23eaac0b4c38, type: 3}
---- !u!4 &522223546 stripped
+--- !u!4 &649494886 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: dc20f2f61a61c5c4a93f23eaac0b4c38, type: 3}
-  m_PrefabInstance: {fileID: 522223545}
+  m_PrefabInstance: {fileID: 649494885}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &784127896
 GameObject:
@@ -242,13 +242,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ThirdPersonCamera
   target: {fileID: 1909746160}
-  distance: 8
-  height: 2.5
+  distance: 4.8
+  height: 4
   mouseSensitivity: 3
-  smoothSpeed: 12
+  smoothSpeed: 8
   fixedAngle: 1
   fixedYaw: 45
-  fixedPitch: 45
+  fixedPitch: 58
   lockCursor: 0
   deathYaw: 45
   deathPitch: 78
@@ -453,7 +453,7 @@ PrefabInstance:
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 8ec1294cd0df73849a719a71bad21ea2, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 522223546}
+      addedObject: {fileID: 649494886}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 8ec1294cd0df73849a719a71bad21ea2, type: 3}
       insertIndex: -1
@@ -667,14 +667,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController3D
   moveSpeed: 5
-  runSpeed: 8
   rotationSpeed: 12
-  jumpHeight: 1.4
   gravity: -20
   groundedStickForce: -2
   stepOffset: 0.55
   slopeLimit: 55
   cameraTransform: {fileID: 784127901}
+  enableDash: 1
+  dashSpeed: 16
+  dashDuration: 0.18
+  dashCooldown: 0.4
+  dashInvincible: 1
+  dashTowardsMouse: 1
 --- !u!143 &1909746159
 CharacterController:
   m_ObjectHideFlags: 0
@@ -724,6 +728,14 @@ MonoBehaviour:
   hitParameter: Hit
   pushParameter: Push
   deathParameter: Die
+  dashParameter: Dash
+  idleState: Idle
+  hitState: Hit
+  hitDuration: 0.5
+  pushState: Push
+  stopPushCrossFade: 0.08
+  walkAnimationSpeedValue: 0.5
+  runAnimationSpeedValue: 1
   alignVisualToControllerFeet: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

@@ -39,9 +39,19 @@ public class SimpleInteractPrompt : MonoBehaviour
         if (!playerInRange || (triggerOnce && hasTriggered))
             return;
 
+        PlayerController3D playerCtrl = FindAnyObjectByType<PlayerController3D>();
+        if (playerCtrl != null && playerCtrl.InputLocked)
+        {
+            HidePrompt();
+            return;
+        }
+
         ShowPrompt();
 
-        if (Input.GetKeyDown(KeyCode.E))
+        InputSettingsManager inputSettings = FindAnyObjectByType<InputSettingsManager>();
+        KeyCode interactKey = (inputSettings != null && inputSettings.Keyboard != null) ? inputSettings.Keyboard.interact : KeyCode.E;
+
+        if (Input.GetKeyDown(interactKey))
             Interact();
     }
 
