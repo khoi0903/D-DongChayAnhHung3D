@@ -11,6 +11,7 @@ public static class S02CaveBuilder
     private const string RootName = "S02_UndergroundCave_Generated";
     private const float RiftZ = 166f;
 
+    [MenuItem("Tools/Dong Chay Anh Hung/Rebuild S02 Underground Cave")]
     public static void BuildScene()
     {
         DeleteOldGeneratedObjects();

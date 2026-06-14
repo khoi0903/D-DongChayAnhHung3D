@@ -1,4 +1,4 @@
-﻿using UnityEditor;
+using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
@@ -7,9 +7,9 @@ public static class S01ChaseSetupBuilder
     private const string ThreatName = "S01_ChaseThreat";
     private const string WaypointsName = "S01_ChaseWaypoints";
 
+    [MenuItem("Tools/Dong Chay Anh Hung/Create S01 Chase Threat")]
     public static void CreateS01ChaseThreat()
     {
-        DeleteIfExists(ThreatName);
         DeleteIfExists(WaypointsName);
 
         Vector3[] waypointPositions = S01CityEscapeBuilder.GetChaseWaypointPositions();
@@ -18,19 +18,30 @@ public static class S01ChaseSetupBuilder
         Material threatMaterial = CreateMaterial("S01_ChaseThreat_PurpleBlack", new Color32(45, 16, 70, 255));
         Material blackMaterial = CreateMaterial("S01_ChaseThreat_Black", new Color32(5, 5, 8, 255));
 
-        GameObject threat = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        Undo.RegisterCreatedObjectUndo(threat, "Create S01 Chase Threat");
-        threat.name = ThreatName;
-        threat.transform.SetParent(chaseParent, true);
+        GameObject threat = GameObject.Find(ThreatName);
+        bool existed = (threat != null);
+
+        if (!existed)
+        {
+            threat = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Undo.RegisterCreatedObjectUndo(threat, "Create S01 Chase Threat");
+            threat.name = ThreatName;
+            threat.transform.SetParent(chaseParent, true);
+            threat.transform.localScale = new Vector3(0.95f, 1.2f, 0.95f);
+
+            Renderer threatRenderer = threat.GetComponent<Renderer>();
+            if (threatRenderer != null)
+                threatRenderer.sharedMaterial = threatMaterial;
+
+            CreateThreatAccent(threat, "Black_Core", new Vector3(0f, 0.15f, 0.18f), new Vector3(0.82f, 1.3f, 0.18f), blackMaterial);
+            CreateThreatAccent(threat, "Black_ShoulderBand", new Vector3(0f, 0.62f, 0f), new Vector3(1.12f, 0.16f, 1.12f), blackMaterial);
+        }
+        else
+        {
+            threat.transform.SetParent(chaseParent, true);
+        }
+
         threat.transform.position = GetThreatStartPosition(waypointPositions);
-        threat.transform.localScale = new Vector3(0.95f, 1.2f, 0.95f);
-
-        Renderer threatRenderer = threat.GetComponent<Renderer>();
-        if (threatRenderer != null)
-            threatRenderer.sharedMaterial = threatMaterial;
-
-        CreateThreatAccent(threat, "Black_Core", new Vector3(0f, 0.15f, 0.18f), new Vector3(0.82f, 1.3f, 0.18f), blackMaterial);
-        CreateThreatAccent(threat, "Black_ShoulderBand", new Vector3(0f, 0.62f, 0f), new Vector3(1.12f, 0.16f, 1.12f), blackMaterial);
 
         GameObject waypointsRoot = new GameObject(WaypointsName);
         Undo.RegisterCreatedObjectUndo(waypointsRoot, "Create S01 Chase Waypoints");
@@ -48,7 +59,9 @@ public static class S01ChaseSetupBuilder
             waypoints[i] = waypoint.transform;
         }
 
-        S01ChaseThreat chaseThreat = threat.AddComponent<S01ChaseThreat>();
+        S01ChaseThreat chaseThreat = threat.GetComponent<S01ChaseThreat>();
+        if (chaseThreat == null)
+            chaseThreat = threat.AddComponent<S01ChaseThreat>();
         chaseThreat.waypoints = waypoints;
         chaseThreat.player = FindPlayer();
         chaseThreat.startDelay = 0f;

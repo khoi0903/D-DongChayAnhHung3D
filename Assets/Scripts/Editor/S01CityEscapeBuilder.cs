@@ -30,7 +30,6 @@ public static class S01CityEscapeBuilder
     private const string RoadSignsPackPath = "Assets/Models/Environment/Props/Street/road_signs_pack.glb";
     private const string StreetLightPath = "Assets/Models/Environment/Props/Street/street_light_fbx.glb";
     private const string TrashBinPath = "Assets/Models/Environment/Props/Street/trash_bin.glb";
-    private const string WarningSignsPath = "Assets/Models/Environment/Props/Street/us_warning_road_signs.glb";
     private const float FloorY = 0f;
     private const float BarrierHeight = 2.2f;
 
@@ -73,6 +72,7 @@ public static class S01CityEscapeBuilder
         };
     }
 
+    [MenuItem("Tools/Dong Chay Anh Hung/Rebuild S01 City Escape Zigzag")]
     public static void BuildScene()
     {
         CleanupOldS01();
