@@ -13,15 +13,48 @@ public class PlayerCombat3D : MonoBehaviour
 
     [Header("Feedback")]
     public Camera aimCamera;
+    public LayerMask aimGroundMask = ~0;
     public float feedbackDuration = 0.18f;
     public Color feedbackColor = new Color(0.15f, 0.9f, 1f, 0.45f);
+    public bool faceAttackDirection = true;
 
     private float lastAttackTime;
     private Material feedbackMaterial;
+    private PlayerController3D playerController;
+    private InputSettingsManager inputManager;
+
+    public bool IsHeavyAttackActive { get; set; }
+    public bool IsAttacking => Time.time < lastAttackTime + attackCooldown;
+
+    private void Awake()
+    {
+        playerController = GetComponent<PlayerController3D>();
+        inputManager = GetComponent<InputSettingsManager>();
+        if (inputManager == null)
+        {
+            inputManager = GetComponentInParent<InputSettingsManager>();
+        }
+    }
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (playerController != null && (playerController.InputLocked || playerController.IsDashing))
+            return;
+
+        KeyCode attackKey = (inputManager != null && inputManager.Keyboard != null) ? inputManager.Keyboard.attack : KeyCode.Mouse0;
+        
+        // Handle Mouse0 or other keys through Input.GetKeyDown
+        bool attackPressed = false;
+        if (attackKey == KeyCode.Mouse0)
+            attackPressed = Input.GetMouseButtonDown(0);
+        else if (attackKey == KeyCode.Mouse1)
+            attackPressed = Input.GetMouseButtonDown(1);
+        else if (attackKey == KeyCode.Mouse2)
+            attackPressed = Input.GetMouseButtonDown(2);
+        else
+            attackPressed = Input.GetKeyDown(attackKey);
+
+        if (attackPressed)
         {
             Attack();
         }
@@ -34,6 +67,7 @@ public class PlayerCombat3D : MonoBehaviour
 
         lastAttackTime = Time.time;
         Vector3 attackDirection = GetAttackDirection();
+        FaceAttackDirection(attackDirection);
 
         GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
         int hitCount = 0;
@@ -76,10 +110,36 @@ public class PlayerCombat3D : MonoBehaviour
         Debug.Log("Resonance counterattack hit enemies: " + hitCount);
     }
 
+    public bool CanCancelCurrentAttack()
+    {
+        // Light attacks can be canceled; Heavy attacks cannot.
+        return IsAttacking && !IsHeavyAttackActive;
+    }
+
+    public void CancelAttack()
+    {
+        // Reset lastAttackTime to cancel the cooldown and attack state
+        lastAttackTime = 0f;
+        Debug.Log("PlayerCombat3D: Attack canceled by Dash.");
+    }
+
     private Vector3 GetAttackDirection()
     {
         if (aimCamera == null)
             aimCamera = Camera.main;
+
+        if (aimCamera != null)
+        {
+            Ray ray = aimCamera.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit, 120f, aimGroundMask, QueryTriggerInteraction.Ignore))
+            {
+                Vector3 cursorDirection = hit.point - transform.position;
+                cursorDirection.y = 0f;
+
+                if (cursorDirection.sqrMagnitude > 0.01f)
+                    return cursorDirection.normalized;
+            }
+        }
 
         Vector3 direction = aimCamera != null ? aimCamera.transform.forward : transform.forward;
         direction.y = 0f;
@@ -100,6 +160,14 @@ public class PlayerCombat3D : MonoBehaviour
 
         float angle = Vector3.Angle(attackDirection, toEnemy.normalized);
         return angle <= attackAngle * 0.5f;
+    }
+
+    private void FaceAttackDirection(Vector3 attackDirection)
+    {
+        if (!faceAttackDirection || attackDirection.sqrMagnitude <= 0.001f)
+            return;
+
+        transform.rotation = Quaternion.LookRotation(attackDirection.normalized);
     }
 
     private void SpawnAttackFeedback(Vector3 attackDirection, bool hit)

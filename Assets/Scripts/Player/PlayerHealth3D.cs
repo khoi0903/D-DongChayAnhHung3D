@@ -45,6 +45,12 @@ public class PlayerHealth3D : MonoBehaviour
         if (isDead)
             return;
 
+        if (playerController != null && playerController.IsDashing && playerController.dashInvincible)
+        {
+            Debug.Log("PlayerHealth3D: Ignored damage due to Dash I-Frames!");
+            return;
+        }
+
         currentHP -= damage;
 
         if (currentHP < 0)

@@ -49,6 +49,9 @@ public class S01ChaseThreat : MonoBehaviour
     public float separationStrength = 0.45f;
     public float personalSpaceDistance = 1.35f;
     public bool debugLogs = true;
+    public bool showPrologueStory = true;
+    public string prologueStoryMessage = "Cổ vật trong bảo tàng đang cộng hưởng với một khe nứt lạ.";
+    public string prologueWarningMessage = "Ánh sáng đen lan ra sau lưng. Có thứ gì đó vừa tỉnh dậy.";
 
     private static readonly List<S01ChaseThreat> activeThreats = new List<S01ChaseThreat>();
     private readonly RaycastHit[] visibilityHits = new RaycastHit[24];
@@ -129,7 +132,7 @@ public class S01ChaseThreat : MonoBehaviour
         PlayThreatAnimation(IdleState, 0f, true);
 
         if (warningUI != null)
-            warningUI.ShowWarning("Dùng WASD để di chuyển.", 6f);
+            ShowOpeningStory();
 
         Log(player != null
             ? "S01ChaseThreat: Player found: " + player.name
@@ -222,7 +225,7 @@ public class S01ChaseThreat : MonoBehaviour
             warningUI = FindAnyObjectByType<S01WarningTextUI>();
 
             if (warningUI != null)
-                warningUI.ShowWarning("Dùng WASD để di chuyển.", 4f);
+                warningUI.ShowWarning("WASD để thoát khỏi bảo tàng. Giữ Shift khi cần bứt tốc.", 4f);
 
         if (tutorialSlowMotionRoutine != null)
             StopCoroutine(tutorialSlowMotionRoutine);
@@ -257,7 +260,7 @@ public class S01ChaseThreat : MonoBehaviour
             if (warningUI == null)
                 warningUI = FindAnyObjectByType<S01WarningTextUI>();
             if (warningUI != null)
-                warningUI.ShowWarning("Giữ Shift để chạy nhanh!", 4f);
+                warningUI.ShowWarning("Giữ Shift để bứt tốc qua đoạn nguy hiểm!", 4f);
 
             shiftSpeedReleased = true;
             chaseTutorialActive = false;
@@ -283,6 +286,18 @@ public class S01ChaseThreat : MonoBehaviour
 
         return playerStartPositionSet &&
                HorizontalDistance(player.position, playerStartPosition) >= movementStartDistance;
+    }
+
+    private void ShowOpeningStory()
+    {
+        if (!showPrologueStory || warningUI == null)
+        {
+            warningUI.ShowWarning("WASD để di chuyển.", 6f);
+            return;
+        }
+
+        warningUI.ShowStory(prologueStoryMessage, 4.8f);
+        warningUI.ShowWarning(prologueWarningMessage, 5.8f);
     }
 
     private void InitializePlayerStartPosition()

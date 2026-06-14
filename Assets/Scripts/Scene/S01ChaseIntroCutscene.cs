@@ -9,7 +9,7 @@ public class S01ChaseIntroCutscene : MonoBehaviour
     public ThirdPersonCamera thirdPersonCamera;
     public S01WarningTextUI warningUI;
 
-    public string subtitle = "Hắc Tinh đã tới sau lưng. Chạy ngay!";
+    public string subtitle = "Khe nứt trong bảo tàng kéo Hắc Tinh ra đời thực. Chạy khỏi đây!";
     public float cutsceneDuration = 3.1f;
     public float cameraMoveDuration = 1.2f;
     public float cameraDistanceFromPlayer = 4f;

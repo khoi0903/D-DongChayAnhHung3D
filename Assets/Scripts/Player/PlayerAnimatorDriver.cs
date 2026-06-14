@@ -11,6 +11,7 @@ public class PlayerAnimatorDriver : MonoBehaviour
     [SerializeField] private string hitParameter = "Hit";
     [SerializeField] private string pushParameter = "Push";
     [SerializeField] private string deathParameter = "Die";
+    [SerializeField] private string dashParameter = "Dash";
     [SerializeField] private string idleState = "Idle";
     [SerializeField] private string hitState = "Hit";
     [SerializeField] private float hitDuration = 0.5f;
@@ -29,11 +30,13 @@ public class PlayerAnimatorDriver : MonoBehaviour
     private int hitHash;
     private int pushHash;
     private int deathHash;
+    private int dashHash;
     private bool hasSpeedParameter;
     private bool hasGroundedParameter;
     private bool hasHitParameter;
     private bool hasPushParameter;
     private bool hasDeathParameter;
+    private bool hasDashParameter;
     private Coroutine hitRoutine;
 
     private void Awake()
@@ -64,10 +67,7 @@ public class PlayerAnimatorDriver : MonoBehaviour
 
         float movedDistance = movement.magnitude;
         bool isMoving = movedDistance > 0.001f || HasMovementInput();
-        bool isRunning = IsRunHeld();
-        float normalizedSpeed = isMoving
-            ? (isRunning ? runAnimationSpeedValue : walkAnimationSpeedValue)
-            : 0f;
+        float normalizedSpeed = isMoving ? runAnimationSpeedValue : 0f; // Run by default if moving
 
         if (hasSpeedParameter)
             animator.SetFloat(speedHash, normalizedSpeed, speedDampTime, Time.deltaTime);
@@ -162,6 +162,18 @@ public class PlayerAnimatorDriver : MonoBehaviour
             animator.CrossFade(idleHash, stopPushCrossFade, 0);
     }
 
+    public void PlayDash()
+    {
+        if (animator == null)
+            return;
+
+        if (cachedController != animator.runtimeAnimatorController)
+            RefreshParameters();
+
+        if (hasDashParameter)
+            animator.SetTrigger(dashHash);
+    }
+
     private void RefreshParameters()
     {
         cachedController = animator != null ? animator.runtimeAnimatorController : null;
@@ -170,11 +182,14 @@ public class PlayerAnimatorDriver : MonoBehaviour
         hasHitParameter = false;
         hasPushParameter = false;
         hasDeathParameter = false;
+        hasDashParameter = false;
+
         speedHash = Animator.StringToHash(speedParameter);
         groundedHash = Animator.StringToHash(groundedParameter);
         hitHash = Animator.StringToHash(hitParameter);
         pushHash = Animator.StringToHash(pushParameter);
         deathHash = Animator.StringToHash(deathParameter);
+        dashHash = Animator.StringToHash(dashParameter);
 
         if (animator == null || cachedController == null)
             return;
@@ -195,6 +210,9 @@ public class PlayerAnimatorDriver : MonoBehaviour
 
             if (parameter.nameHash == deathHash && parameter.type == AnimatorControllerParameterType.Trigger)
                 hasDeathParameter = true;
+
+            if (parameter.nameHash == dashHash && parameter.type == AnimatorControllerParameterType.Trigger)
+                hasDashParameter = true;
         }
 
         animator.applyRootMotion = false;
@@ -207,13 +225,19 @@ public class PlayerAnimatorDriver : MonoBehaviour
 
     private bool HasMovementInput()
     {
-        return Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.01f ||
-               Mathf.Abs(Input.GetAxisRaw("Vertical")) > 0.01f;
-    }
+        if (playerController != null && playerController.InputLocked)
+            return false;
 
-    private bool IsRunHeld()
-    {
-        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        InputSettingsManager inputSettings = playerController != null ? playerController.GetComponent<InputSettingsManager>() : null;
+        if (inputSettings != null && inputSettings.Keyboard != null)
+        {
+            return Input.GetKey(inputSettings.Keyboard.moveLeft) ||
+                   Input.GetKey(inputSettings.Keyboard.moveRight) ||
+                   Input.GetKey(inputSettings.Keyboard.moveForward) ||
+                   Input.GetKey(inputSettings.Keyboard.moveBackward);
+        }
+
+        return Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.D);
     }
 
     private void AlignVisualToControllerFeet()

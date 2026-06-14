@@ -6,13 +6,13 @@ public class ThirdPersonCamera : MonoBehaviour
     public Transform target;
 
     [Header("Camera Settings")]
-    public float distance = 7f;
-    public float height = 2f;
+    public float distance = 4.8f;
+    public float height = 4f;
     public float mouseSensitivity = 3f;
-    public float smoothSpeed = 12f;
+    public float smoothSpeed = 8f;
     public bool fixedAngle = true;
     public float fixedYaw = 45f;
-    public float fixedPitch = 45f;
+    public float fixedPitch = 58f;
     public bool lockCursor = false;
 
     [Header("Death View")]

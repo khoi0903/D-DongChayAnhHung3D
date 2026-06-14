@@ -11,6 +11,8 @@ public class S02CaveEventController : MonoBehaviour
     private const int ResonanceEnemyDamage = 10;
     private const float ResonanceEnemyMoveSpeed = 2.85f;
     private const float ResonanceEnemyAttackCooldown = 1.6f;
+    private const float PressureEnemyMoveSpeed = 3.25f;
+    private const float SafeSpawnDistanceBehindPlayer = 8f;
 
     public Transform player;
     public PlayerCombat3D playerCombat;
@@ -22,11 +24,21 @@ public class S02CaveEventController : MonoBehaviour
     public Transform timeRift;
     public S02CutsceneController cutsceneController;
 
-    public float stabilizeDuration = 30f;
-    public float enemySpawnInterval = 6f;
+    public float stabilizeDuration = 24f;
+    public float enemySpawnInterval = 5.5f;
     public int maxActiveEnemies = 4;
-    public string nextSceneName = "S03_CoLoaArrival";
+    public string nextSceneName = "S03";
 
+    private enum FlowStage
+    {
+        Intro,
+        Explore,
+        PressureChase,
+        ResonanceCombat,
+        Complete
+    }
+
+    private FlowStage stage = FlowStage.Intro;
     private bool ancientSignsTriggered;
     private bool voicesTriggered;
     private bool descentTriggered;
@@ -39,11 +51,13 @@ public class S02CaveEventController : MonoBehaviour
     private bool warnedMissingInteractionText;
     private float stabilizationStartTime;
     private float nextMinionSpawnTime;
+    private int spawnedEnemyCounter;
 
     private void Start()
     {
         CleanupSceneStartRuntimeState();
         FindReferencesIfNeeded();
+        ConfigureDiabloStyleCamera();
         EnsureTimeRiftChamberWalkableSurface();
         DisableBlockingTimeRiftVisualColliders();
         SetPlayerCombat(false);
@@ -54,8 +68,20 @@ public class S02CaveEventController : MonoBehaviour
 
     private void Update()
     {
-        if (playerNearTimeRift && !resonanceUnlocked && Input.GetKeyDown(KeyCode.E))
-            ActivateResonance();
+        if (playerNearTimeRift && !resonanceUnlocked)
+        {
+            PlayerController3D playerCtrl = FindAnyObjectByType<PlayerController3D>();
+            bool isLocked = playerCtrl != null && playerCtrl.InputLocked;
+
+            if (!isLocked)
+            {
+                InputSettingsManager inputSettings = FindAnyObjectByType<InputSettingsManager>();
+                KeyCode interactKey = (inputSettings != null && inputSettings.Keyboard != null) ? inputSettings.Keyboard.interact : KeyCode.E;
+
+                if (Input.GetKeyDown(interactKey))
+                    ActivateResonance();
+            }
+        }
 
         if (stabilizationRunning)
             UpdateStabilization();
@@ -74,7 +100,7 @@ public class S02CaveEventController : MonoBehaviour
 
     public void TriggerVoices()
     {
-        if (voicesTriggered)
+        if (voicesTriggered || !ancientSignsTriggered)
             return;
 
         voicesTriggered = true;
@@ -85,10 +111,11 @@ public class S02CaveEventController : MonoBehaviour
 
     public void TriggerBlackStarDescent()
     {
-        if (descentTriggered)
+        if (descentTriggered || !voicesTriggered)
             return;
 
         descentTriggered = true;
+        stage = FlowStage.PressureChase;
         StartCoroutine(BlackStarDescentSequence());
     }
 
@@ -104,6 +131,13 @@ public class S02CaveEventController : MonoBehaviour
 
         if (near)
         {
+            if (!CanUseTimeRift())
+            {
+                ShowStory("Khe nứt chưa phản ứng. Đi theo dấu sáng sâu hơn trong hang.", 3.2f);
+                HideInteractionText();
+                return;
+            }
+
             ShowStory("Khe nứt thời gian cộng hưởng khi Văn An đến gần.", 3.5f);
             ShowInteractionText("Nhấn E để cộng hưởng với khe nứt thời gian");
         }
@@ -118,6 +152,7 @@ public class S02CaveEventController : MonoBehaviour
         if (cutsceneController != null)
         {
             yield return cutsceneController.PlayIntro();
+            stage = FlowStage.Explore;
             ShowStory("Ánh sáng xanh yếu ớt dẫn sâu vào lòng đất.", 4.5f);
             yield break;
         }
@@ -128,6 +163,7 @@ public class S02CaveEventController : MonoBehaviour
         ShowWarning("Không thể tấn công. Tìm lối ra.", 4.5f);
         yield return new WaitForSeconds(4.7f);
         ShowStory("Ánh sáng xanh yếu ớt dẫn sâu vào lòng đất.", 4.5f);
+        stage = FlowStage.Explore;
     }
 
     private IEnumerator ShowStorySequence(string first, string second)
@@ -159,7 +195,14 @@ public class S02CaveEventController : MonoBehaviour
         if (resonanceUnlocked)
             return;
 
+        if (!CanUseTimeRift())
+        {
+            ShowStory("TimeRift còn im lặng. Hãy đi theo dấu sáng trong hang.", 3f);
+            return;
+        }
+
         resonanceUnlocked = true;
+        stage = FlowStage.ResonanceCombat;
         HideInteractionText();
         StartCoroutine(ResonanceSequence());
     }
@@ -188,15 +231,23 @@ public class S02CaveEventController : MonoBehaviour
 
     private void StartStabilization()
     {
+        ConfigureDiabloStyleCamera();
         stabilizationRunning = true;
         stabilizationStartTime = Time.time;
-        nextMinionSpawnTime = Time.time;
+        nextMinionSpawnTime = Time.time + 1.2f;
         ShowProgressText("Ổn định khe nứt: 0%");
         Debug.Log("S02 TimeRift stabilization started.");
     }
 
     private void UpdateStabilization()
     {
+        if (IsPlayerDead())
+        {
+            stabilizationRunning = false;
+            HideProgressText();
+            return;
+        }
+
         float elapsed = Time.time - stabilizationStartTime;
         float normalized = Mathf.Clamp01(elapsed / Mathf.Max(0.1f, stabilizeDuration));
         int percent = Mathf.RoundToInt(normalized * 100f);
@@ -232,7 +283,11 @@ public class S02CaveEventController : MonoBehaviour
         if (!stabilizationRunning)
             return;
 
+        if (IsPlayerDead())
+            return;
+
         stabilizationRunning = false;
+        stage = FlowStage.Complete;
         HideProgressText();
         StartCoroutine(CompleteSequence());
     }
@@ -312,7 +367,8 @@ public class S02CaveEventController : MonoBehaviour
         Vector3 spawnPosition = GetSafeSpawnPosition(spawnPoint);
         Quaternion spawnRotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
         GameObject enemy = Instantiate(minionPrefab, spawnPosition, spawnRotation);
-        enemy.name = "S02_Minion";
+        spawnedEnemyCounter++;
+        enemy.name = resonancePhase ? "S02_Minion_Resonance_" + spawnedEnemyCounter.ToString("00") : "S02_Minion_Pressure";
         enemy.tag = "Enemy";
         EnsureEnemyCollider(enemy);
 
@@ -333,9 +389,13 @@ public class S02CaveEventController : MonoBehaviour
 
         chase.chaseRange = 120f;
         chase.attackRange = resonancePhase ? 1.7f : 1.35f;
-        chase.moveSpeed = resonancePhase ? ResonanceEnemyMoveSpeed : 2.8f;
+        chase.moveSpeed = resonancePhase ? ResonanceEnemyMoveSpeed : PressureEnemyMoveSpeed;
         chase.damage = resonancePhase ? ResonanceEnemyDamage : PreResonanceThreatDamage;
         chase.attackCooldown = resonancePhase ? ResonanceEnemyAttackCooldown : 1f;
+        chase.separationRadius = Mathf.Max(chase.separationRadius, 1.55f);
+        chase.separationStrength = Mathf.Max(chase.separationStrength, 0.62f);
+        chase.personalSpaceDistance = Mathf.Max(chase.personalSpaceDistance, 1.35f);
+        chase.ResetForSpawn(player);
         ForceEnemyAnimation(enemy);
     }
 
@@ -400,19 +460,26 @@ public class S02CaveEventController : MonoBehaviour
         if (spawnPoint != null)
         {
             Vector3 spawnPosition = spawnPoint.position;
-            if (player == null || spawnPosition.z <= player.position.z - 4f)
-                return spawnPosition;
+            if (player == null || spawnPosition.z <= player.position.z - SafeSpawnDistanceBehindPlayer)
+                return SpreadSpawnPosition(spawnPosition);
         }
 
         if (player != null)
-            return player.position + new Vector3(0f, 0.4f, -12f);
+            return SpreadSpawnPosition(player.position + new Vector3(0f, 0.4f, -12f));
 
         return transform.position;
     }
 
     private bool IsBehindPlayer(Transform spawnPoint)
     {
-        return spawnPoint != null && (player == null || spawnPoint.position.z <= player.position.z - 4f);
+        return spawnPoint != null && (player == null || spawnPoint.position.z <= player.position.z - SafeSpawnDistanceBehindPlayer);
+    }
+
+    private Vector3 SpreadSpawnPosition(Vector3 basePosition)
+    {
+        int sideIndex = spawnedEnemyCounter % 3;
+        float sideOffset = sideIndex == 0 ? 0f : (sideIndex == 1 ? -2.1f : 2.1f);
+        return basePosition + new Vector3(sideOffset, 0f, -0.9f * spawnedEnemyCounter);
     }
 
     private void NormalizeActiveEnemiesForResonance()
@@ -445,6 +512,9 @@ public class S02CaveEventController : MonoBehaviour
             chase.moveSpeed = ResonanceEnemyMoveSpeed;
             chase.damage = ResonanceEnemyDamage;
             chase.attackCooldown = ResonanceEnemyAttackCooldown;
+            chase.separationRadius = Mathf.Max(chase.separationRadius, 1.55f);
+            chase.separationStrength = Mathf.Max(chase.separationStrength, 0.62f);
+            chase.personalSpaceDistance = Mathf.Max(chase.personalSpaceDistance, 1.35f);
         }
 
         Debug.Log("S02 resonance started. Active Minions normalized to " + ResonanceEnemyHP + " HP.");
@@ -651,6 +721,20 @@ public class S02CaveEventController : MonoBehaviour
         Debug.Log(enabled ? "S02 resonance combat enabled." : "S02 resonance combat disabled.");
     }
 
+    private bool IsPlayerDead()
+    {
+        if (player == null)
+            return false;
+
+        PlayerHealth3D health = player.GetComponent<PlayerHealth3D>();
+        return health != null && health.isDead;
+    }
+
+    private bool CanUseTimeRift()
+    {
+        return descentTriggered && (stage == FlowStage.PressureChase || stage == FlowStage.ResonanceCombat);
+    }
+
     private void ConfigureResonanceCombat()
     {
         playerCombat.damage = 24;
@@ -663,6 +747,25 @@ public class S02CaveEventController : MonoBehaviour
 
         if (playerCombat.aimCamera == null)
             playerCombat.aimCamera = Camera.main;
+    }
+
+    private void ConfigureDiabloStyleCamera()
+    {
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+            return;
+
+        ThirdPersonCamera playerCamera = mainCamera.GetComponent<ThirdPersonCamera>();
+        if (playerCamera == null)
+            return;
+
+        playerCamera.fixedAngle = true;
+        playerCamera.fixedYaw = 45f;
+        playerCamera.fixedPitch = 58f;
+        playerCamera.distance = 4.8f;
+        playerCamera.height = 4f;
+        playerCamera.smoothSpeed = 8f;
+        playerCamera.lockCursor = false;
     }
 
     private void ShowStory(string message, float duration)

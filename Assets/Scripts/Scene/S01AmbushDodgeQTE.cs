@@ -91,7 +91,10 @@ public class S01AmbushDodgeQTE : MonoBehaviour
             MoveThreat(rightThreat, transform.position + rightStartOffset, GetThreatEndPosition(transform.position + rightStartOffset, center), eased);
             UpdateQteUI(1f - t);
 
-            if (Input.GetKeyDown(KeyCode.E))
+            InputSettingsManager inputSettings = FindAnyObjectByType<InputSettingsManager>();
+            KeyCode interactKey = (inputSettings != null && inputSettings.Keyboard != null) ? inputSettings.Keyboard.interact : KeyCode.E;
+
+            if (Input.GetKeyDown(interactKey))
             {
                 dodged = true;
                 break;
