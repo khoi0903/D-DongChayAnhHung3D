@@ -9,6 +9,7 @@ public class PlayerAnimatorDriver : MonoBehaviour
     [SerializeField] private string speedParameter = "Speed";
     [SerializeField] private string groundedParameter = "Grounded";
     [SerializeField] private string hitParameter = "Hit";
+    [SerializeField] private string lightAttackParameter = "LightAttack";
     [SerializeField] private string pushParameter = "Push";
     [SerializeField] private string deathParameter = "Die";
     [SerializeField] private string dashParameter = "Dash";
@@ -28,12 +29,14 @@ public class PlayerAnimatorDriver : MonoBehaviour
     private int speedHash;
     private int groundedHash;
     private int hitHash;
+    private int lightAttackHash;
     private int pushHash;
     private int deathHash;
     private int dashHash;
     private bool hasSpeedParameter;
     private bool hasGroundedParameter;
     private bool hasHitParameter;
+    private bool hasLightAttackParameter;
     private bool hasPushParameter;
     private bool hasDeathParameter;
     private bool hasDashParameter;
@@ -132,6 +135,23 @@ public class PlayerAnimatorDriver : MonoBehaviour
             animator.SetTrigger(deathHash);
     }
 
+    public void PlayLightAttack()
+    {
+        if (animator == null)
+            return;
+
+        if (cachedController != animator.runtimeAnimatorController)
+            RefreshParameters();
+
+        if (hasLightAttackParameter)
+        {
+            animator.SetTrigger(lightAttackHash);
+            return;
+        }
+
+        PlayPush();
+    }
+
     public void PlayPush()
     {
         if (animator == null)
@@ -180,6 +200,7 @@ public class PlayerAnimatorDriver : MonoBehaviour
         hasSpeedParameter = false;
         hasGroundedParameter = false;
         hasHitParameter = false;
+        hasLightAttackParameter = false;
         hasPushParameter = false;
         hasDeathParameter = false;
         hasDashParameter = false;
@@ -187,6 +208,7 @@ public class PlayerAnimatorDriver : MonoBehaviour
         speedHash = Animator.StringToHash(speedParameter);
         groundedHash = Animator.StringToHash(groundedParameter);
         hitHash = Animator.StringToHash(hitParameter);
+        lightAttackHash = Animator.StringToHash(lightAttackParameter);
         pushHash = Animator.StringToHash(pushParameter);
         deathHash = Animator.StringToHash(deathParameter);
         dashHash = Animator.StringToHash(dashParameter);
@@ -204,6 +226,9 @@ public class PlayerAnimatorDriver : MonoBehaviour
 
             if (parameter.nameHash == hitHash && parameter.type == AnimatorControllerParameterType.Trigger)
                 hasHitParameter = true;
+
+            if (parameter.nameHash == lightAttackHash && parameter.type == AnimatorControllerParameterType.Trigger)
+                hasLightAttackParameter = true;
 
             if (parameter.nameHash == pushHash && parameter.type == AnimatorControllerParameterType.Trigger)
                 hasPushParameter = true;

@@ -12438,6 +12438,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealthUI
   playerHealth: {fileID: 1815371095}
   healthSlider: {fileID: 348314486}
+  healthText: {fileID: 0}
+  fillImage: {fileID: 0}
+  healthyColor: {r: 0.86, g: 0.1, b: 0.13, a: 1}
+  dangerColor: {r: 0.55, g: 0.02, b: 0.04, a: 1}
 --- !u!114 &560497964
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -34202,7 +34206,7 @@ PrefabInstance:
     - target: {fileID: -7676612043611361953, guid: dc20f2f61a61c5c4a93f23eaac0b4c38, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 20d5061073836264694b78484d70f4fb, type: 2}
+      objectReference: {fileID: 2100000, guid: 5826b5c6c32d01a4b968eb8cf4583ccb, type: 2}
     - target: {fileID: 919132149155446097, guid: dc20f2f61a61c5c4a93f23eaac0b4c38, type: 3}
       propertyPath: m_Name
       value: PlayerVisual
@@ -35345,6 +35349,15 @@ MonoBehaviour:
   attackCooldown: 0.5
   knockbackForce: 6.5
   enemyStunDuration: 0.42
+  heavyDamage: 58
+  heavyAttackRange: 5.9
+  heavyAttackAngle: 125
+  heavyCloseHitRadius: 1.75
+  heavyAttackCooldown: 1.1
+  heavyWindup: 0.18
+  heavyKnockbackForce: 10.5
+  heavyEnemyStunDuration: 0.68
+  heavyFeedbackColor: {r: 1, g: 0.58, b: 0.12, a: 0.55}
   aimCamera: {fileID: 0}
   aimGroundMask:
     serializedVersion: 2
@@ -35369,6 +35382,7 @@ MonoBehaviour:
   speedParameter: Speed
   groundedParameter: Grounded
   hitParameter: Hit
+  lightAttackParameter: LightAttack
   pushParameter: Push
   deathParameter: Die
   dashParameter: Dash

@@ -8,8 +8,9 @@ Game theo chan nhom hoc sinh hien dai bi cuon vao mot bien co lich su - ky ao. P
 
 - **S01_CityPrototype**: canh mo dau, tutorial chay tron trong thanh pho.
 - **S02_UndergroundCave**: canh sinh ton - bi an duoi long dat, dan toi TimeRift.
+- **S03**: single-player combat arena, wave quai va he thong Blessing Anh Linh.
 
-Nhan vat chinh o S01 la hoc sinh binh thuong, nen khong co chien dau trong canh nay. Combat chi bat dau tam thoi trong S02 sau khi TimeRift cong huong voi Van An.
+Nhan vat chinh o S01 la hoc sinh binh thuong, nen khong co chien dau trong canh nay. Combat chi bat dau tam thoi trong S02 sau khi TimeRift cong huong voi Van An. S03 la prototype rieng cho combat arena va build roguelite.
 
 ## S01_CityPrototype
 
@@ -122,6 +123,42 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 
 - `Tools > Dong Chay Anh Hung > Rebuild S02 Underground Cave`
 
+## S03 Combat Arena
+
+### Muc tieu canh
+
+S03 hien la arena single player lay cam hung tu flow chon suc manh sau moi round:
+
+- Player xuat hien trong graybox arena Co Loa.
+- Moi wave spawn Hac Tinh tu cac diem quanh dau truong.
+- Player di chuyen bang WASD, danh thuong bang Mouse0, heavy attack bang Mouse1, Dash bang Shift.
+- Khi ha het quai trong wave, combat tam dung.
+- UI hien 3 Blessing ngau nhien.
+- Player chon 1 Blessing, hieu ung ap dung ngay.
+- Wave tiep theo bat dau, Blessing co the cong don de tao build.
+
+### Blessing Anh Linh
+
+He thong S03 dung cac Anh Hung Lich Su Viet Nam thay cho pantheon cua Hades/SWORN:
+
+- **An Duong Vuong**: phong thu, la chan, canh gioi, No Than.
+- **Trung Trac**: y chi chien dau, toc danh, hoi nang luong, hoi sinh.
+- **Trung Nhi**: co dong, dash damage, truy kich, phan than.
+- **Quang Trung**: tan cong boc phat, chi mang, giam hoi Dash, set danh.
+
+Moi Blessing la `ScriptableObject` trong `Assets/Blessings/S03`.
+
+Ultimate Blessing tu dong mo khi nguoi choi co du 3 Blessing khac nhau cua cung mot nhanh:
+
+- `Thanh Co Loa`
+- `Hai Ba Khoi Nghia`
+- `Voi Chien`
+- `Xuan Ky Dau`
+
+### Menu builder
+
+- `Tools > Dong Chay Anh Hung > Rebuild S03 Combat Arena`
+
 ## Scripts chinh
 
 ### Runtime
@@ -133,6 +170,11 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 - `Assets/Scripts/Scene/S02CaveEventController.cs`
 - `Assets/Scripts/Scene/S02CutsceneController.cs`
 - `Assets/Scripts/Scene/S02TimeRiftTrigger.cs`
+- `Assets/Scripts/Scene/S03ArenaDirector.cs`
+- `Assets/Scripts/Blessing/BlessingDefinition.cs`
+- `Assets/Scripts/Blessing/BlessingManager.cs`
+- `Assets/Scripts/Blessing/BlessingRuntimeController.cs`
+- `Assets/Scripts/Blessing/BlessingChoiceUI.cs`
 - `Assets/Scripts/Scene/EscapeDoorQTE.cs`
 - `Assets/Scripts/Player/SlowZone.cs`
 
@@ -141,6 +183,7 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 - `Assets/Scripts/Editor/S01CityEscapeBuilder.cs`
 - `Assets/Scripts/Editor/S01ChaseSetupBuilder.cs`
 - `Assets/Scripts/Editor/S02CaveBuilder.cs`
+- `Assets/Scripts/Editor/S03SinglePlayerArenaBuilder.cs`
 - `Assets/Scripts/Editor/PlayerVisualBuilder.cs`
 
 ## Cach test nhanh
@@ -159,6 +202,14 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 2. Chay `Tools > Dong Chay Anh Hung > Rebuild S02 Underground Cave`.
 3. Bam Play.
 4. Test flow: intro -> ancient signs -> voices -> Hac Tinh descent -> TimeRift resonance -> 30s stabilization -> ending cutscene.
+
+### Test S03
+
+1. Mo scene `Assets/Scenes/S03.unity`.
+2. Chay `Tools > Dong Chay Anh Hung > Rebuild S03 Combat Arena`.
+3. Bam Play.
+4. Test flow: Wave bat dau -> ha het quai -> chon 1 trong 3 Blessing -> wave tiep theo.
+5. Neu Unity Hub bao `No active licenses`, vao `Manage licenses` va kich hoat Unity Personal/Student truoc khi bam Play.
 
 ## Ghi chu hien tai
 

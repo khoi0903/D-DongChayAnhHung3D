@@ -12,6 +12,7 @@ public static class AnhThuPlayerSetupBuilder
     private const string IdlePath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@Breathing Idle.fbx";
     private const string WalkPath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@Walking.fbx";
     private const string RunPath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@Fast Run.fbx";
+    private const string LightAttackPath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@One Hand Sword Combo.fbx";
     private const string HitPath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@Getting_Hit.fbx";
     private const string PushPath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@Push.fbx";
     private const string DeathPath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@Death.fbx";
@@ -23,6 +24,7 @@ public static class AnhThuPlayerSetupBuilder
 
     private const string SpeedParameter = "Speed";
     private const string GroundedParameter = "Grounded";
+    private const string LightAttackParameter = "LightAttack";
     private const string HitParameter = "Hit";
     private const string PushParameter = "Push";
     private const string DieParameter = "Die";
@@ -37,6 +39,7 @@ public static class AnhThuPlayerSetupBuilder
         ConfigureActionImporter(IdlePath, avatar, "Idle", true, true);
         ConfigureActionImporter(WalkPath, avatar, "Walk", true, true);
         ConfigureActionImporter(RunPath, avatar, "Run", true, true);
+        ConfigureActionImporter(LightAttackPath, avatar, "LightAttack", false, true);
         ConfigureActionImporter(HitPath, avatar, "Hit", false, true);
         ConfigureActionImporter(PushPath, avatar, "Push", false, true);
         ConfigureActionImporter(DeathPath, avatar, "Death", false, true);
@@ -45,11 +48,12 @@ public static class AnhThuPlayerSetupBuilder
         AnimationClip idle = FindClip(IdlePath, "Idle") ?? FindClip(BaseModelPath, "ModelIdle");
         AnimationClip walk = FindClip(WalkPath, "Walk");
         AnimationClip run = FindClip(RunPath, "Run");
+        AnimationClip lightAttack = FindClip(LightAttackPath, "LightAttack") ?? FindClip(LightAttackPath, "One Hand Sword Combo");
         AnimationClip hit = FindClip(HitPath, "Hit");
         AnimationClip push = FindClip(PushPath, "Push");
         AnimationClip death = FindClip(DeathPath, "Death");
 
-        AnimatorController controller = BuildController(idle, walk, run, hit, push, death);
+        AnimatorController controller = BuildController(idle, walk, run, lightAttack, hit, push, death);
         Material playerMaterial = GetOrCreateAnhThuMaterial();
         int changedScenes = ReplaceScenePlayers(controller, avatar, playerMaterial);
 
@@ -57,6 +61,36 @@ public static class AnhThuPlayerSetupBuilder
         AssetDatabase.Refresh();
         WriteReport(controller, avatar, changedScenes, idle, walk, run, hit, push, death);
         Debug.Log("AnhThuPlayerSetupBuilder: setup completed. Changed scenes: " + changedScenes);
+    }
+
+    [MenuItem("Tools/Dong Chay Anh Hung/Rebuild Anh Thu Animator Controller")]
+    public static void RebuildAnhThuAnimatorController()
+    {
+        EnsureFolder("Assets/Animations/Player");
+
+        Avatar avatar = EnsureBaseAvatar();
+        ConfigureActionImporter(BaseModelPath, avatar, "ModelIdle", true, false);
+        ConfigureActionImporter(IdlePath, avatar, "Idle", true, true);
+        ConfigureActionImporter(WalkPath, avatar, "Walk", true, true);
+        ConfigureActionImporter(RunPath, avatar, "Run", true, true);
+        ConfigureActionImporter(LightAttackPath, avatar, "LightAttack", false, true);
+        ConfigureActionImporter(HitPath, avatar, "Hit", false, true);
+        ConfigureActionImporter(PushPath, avatar, "Push", false, true);
+        ConfigureActionImporter(DeathPath, avatar, "Death", false, true);
+        AssetDatabase.Refresh();
+
+        AnimationClip idle = FindClip(IdlePath, "Idle") ?? FindClip(BaseModelPath, "ModelIdle");
+        AnimationClip walk = FindClip(WalkPath, "Walk");
+        AnimationClip run = FindClip(RunPath, "Run");
+        AnimationClip lightAttack = FindClip(LightAttackPath, "LightAttack") ?? FindClip(LightAttackPath, "One Hand Sword Combo");
+        AnimationClip hit = FindClip(HitPath, "Hit");
+        AnimationClip push = FindClip(PushPath, "Push");
+        AnimationClip death = FindClip(DeathPath, "Death");
+
+        BuildController(idle, walk, run, lightAttack, hit, push, death);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("AnhThuPlayerSetupBuilder: rebuilt Anh Thu Animator Controller with LightAttack.");
     }
 
     private static Avatar EnsureBaseAvatar()
@@ -159,7 +193,7 @@ public static class AnhThuPlayerSetupBuilder
             .FirstOrDefault(clip => !clip.name.StartsWith("__preview__"));
     }
 
-    private static AnimatorController BuildController(AnimationClip idle, AnimationClip walk, AnimationClip run, AnimationClip hit, AnimationClip push, AnimationClip death)
+    private static AnimatorController BuildController(AnimationClip idle, AnimationClip walk, AnimationClip run, AnimationClip lightAttack, AnimationClip hit, AnimationClip push, AnimationClip death)
     {
         AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
         if (controller == null)
@@ -175,6 +209,7 @@ public static class AnhThuPlayerSetupBuilder
 
         controller.AddParameter(SpeedParameter, AnimatorControllerParameterType.Float);
         controller.AddParameter(GroundedParameter, AnimatorControllerParameterType.Bool);
+        controller.AddParameter(LightAttackParameter, AnimatorControllerParameterType.Trigger);
         controller.AddParameter(HitParameter, AnimatorControllerParameterType.Trigger);
         controller.AddParameter(PushParameter, AnimatorControllerParameterType.Trigger);
         controller.AddParameter(DieParameter, AnimatorControllerParameterType.Trigger);
@@ -182,6 +217,7 @@ public static class AnhThuPlayerSetupBuilder
         AnimatorState idleState = AddState(stateMachine, "Idle", idle, new Vector3(260f, 90f, 0f), 1f);
         AnimatorState walkState = AddState(stateMachine, "Walk", walk, new Vector3(520f, 30f, 0f), 1f);
         AnimatorState runState = AddState(stateMachine, "Run", run != null ? run : walk, new Vector3(520f, 150f, 0f), 1f);
+        AnimatorState lightAttackState = AddState(stateMachine, "LightAttack", lightAttack != null ? lightAttack : push, new Vector3(780f, -60f, 0f), 1f);
         AnimatorState hitState = AddState(stateMachine, "Hit", hit, new Vector3(780f, 30f, 0f), 1f);
         AnimatorState pushState = AddState(stateMachine, "Push", push, new Vector3(780f, 100f, 0f), 1f);
         AnimatorState deathState = AddState(stateMachine, "Death", death, new Vector3(1040f, 170f, 0f), 1f);
@@ -192,9 +228,11 @@ public static class AnhThuPlayerSetupBuilder
         AddFloatTransition(walkState, runState, AnimatorConditionMode.Greater, 0.55f, SpeedParameter);
         AddFloatTransition(runState, walkState, AnimatorConditionMode.Less, 0.55f, SpeedParameter);
         AddFloatTransition(runState, idleState, AnimatorConditionMode.Less, 0.05f, SpeedParameter);
+        AddTriggerTransition(stateMachine, lightAttackState, LightAttackParameter);
         AddTriggerTransition(stateMachine, hitState, HitParameter);
         AddTriggerTransition(stateMachine, pushState, PushParameter);
         AddTriggerTransition(stateMachine, deathState, DieParameter);
+        AddExitTransition(lightAttackState, idleState, 0.9f);
         AddExitTransition(hitState, idleState, 0.85f);
         AddExitTransition(pushState, idleState, 0.88f);
 
