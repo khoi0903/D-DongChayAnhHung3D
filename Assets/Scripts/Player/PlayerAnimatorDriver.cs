@@ -8,10 +8,11 @@ public class PlayerAnimatorDriver : MonoBehaviour
     [SerializeField] private float speedDampTime = 0.12f;
     [SerializeField] private string speedParameter = "Speed";
     [SerializeField] private string groundedParameter = "Grounded";
-    [SerializeField] private string hitParameter = "Hit";
-    [SerializeField] private string pushParameter = "Push";
-    [SerializeField] private string deathParameter = "Die";
-    [SerializeField] private string dashParameter = "Dash";
+    [SerializeField] private string hitParameter        = "Hit";
+    [SerializeField] private string lightAttackParameter  = "LightAttack"; // Đòn đánh thường (Mouse0)
+    [SerializeField] private string pushParameter         = "Push";       // Heavy attack / Push
+    [SerializeField] private string deathParameter        = "Die";
+    [SerializeField] private string dashParameter         = "Dash";
     [SerializeField] private string idleState = "Idle";
     [SerializeField] private string hitState = "Hit";
     [SerializeField] private float hitDuration = 0.5f;
@@ -28,12 +29,14 @@ public class PlayerAnimatorDriver : MonoBehaviour
     private int speedHash;
     private int groundedHash;
     private int hitHash;
+    private int lightAttackHash;
     private int pushHash;
     private int deathHash;
     private int dashHash;
     private bool hasSpeedParameter;
     private bool hasGroundedParameter;
     private bool hasHitParameter;
+    private bool hasLightAttackParameter;
     private bool hasPushParameter;
     private bool hasDeathParameter;
     private bool hasDashParameter;
@@ -132,6 +135,28 @@ public class PlayerAnimatorDriver : MonoBehaviour
             animator.SetTrigger(deathHash);
     }
 
+    /// <summary>
+    /// Phát animation đòn đánh thường (LightAttack). Nếu không có tham số LightAttack
+    /// thì fallback sang Push để không bị lỗi silent.
+    /// </summary>
+    public void PlayLightAttack()
+    {
+        if (animator == null)
+            return;
+
+        if (cachedController != animator.runtimeAnimatorController)
+            RefreshParameters();
+
+        if (hasLightAttackParameter)
+        {
+            animator.SetTrigger(lightAttackHash);
+            return;
+        }
+
+        // Fallback sang Push nếu animator chưa có LightAttack trigger
+        PlayPush();
+    }
+
     public void PlayPush()
     {
         if (animator == null)
@@ -176,20 +201,22 @@ public class PlayerAnimatorDriver : MonoBehaviour
 
     private void RefreshParameters()
     {
-        cachedController = animator != null ? animator.runtimeAnimatorController : null;
-        hasSpeedParameter = false;
-        hasGroundedParameter = false;
-        hasHitParameter = false;
-        hasPushParameter = false;
-        hasDeathParameter = false;
-        hasDashParameter = false;
+        cachedController        = animator != null ? animator.runtimeAnimatorController : null;
+        hasSpeedParameter       = false;
+        hasGroundedParameter    = false;
+        hasHitParameter         = false;
+        hasLightAttackParameter = false;
+        hasPushParameter        = false;
+        hasDeathParameter       = false;
+        hasDashParameter        = false;
 
-        speedHash = Animator.StringToHash(speedParameter);
-        groundedHash = Animator.StringToHash(groundedParameter);
-        hitHash = Animator.StringToHash(hitParameter);
-        pushHash = Animator.StringToHash(pushParameter);
-        deathHash = Animator.StringToHash(deathParameter);
-        dashHash = Animator.StringToHash(dashParameter);
+        speedHash       = Animator.StringToHash(speedParameter);
+        groundedHash    = Animator.StringToHash(groundedParameter);
+        hitHash         = Animator.StringToHash(hitParameter);
+        lightAttackHash = Animator.StringToHash(lightAttackParameter);
+        pushHash        = Animator.StringToHash(pushParameter);
+        deathHash       = Animator.StringToHash(deathParameter);
+        dashHash        = Animator.StringToHash(dashParameter);
 
         if (animator == null || cachedController == null)
             return;
@@ -204,6 +231,9 @@ public class PlayerAnimatorDriver : MonoBehaviour
 
             if (parameter.nameHash == hitHash && parameter.type == AnimatorControllerParameterType.Trigger)
                 hasHitParameter = true;
+
+            if (parameter.nameHash == lightAttackHash && parameter.type == AnimatorControllerParameterType.Trigger)
+                hasLightAttackParameter = true;
 
             if (parameter.nameHash == pushHash && parameter.type == AnimatorControllerParameterType.Trigger)
                 hasPushParameter = true;
