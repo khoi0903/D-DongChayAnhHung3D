@@ -122,6 +122,28 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 
 - `Tools > Dong Chay Anh Hung > Rebuild S02 Underground Cave`
 
+## S03_CoLoa Combat Arena
+
+### Muc tieu canh
+
+S03 la arena chien dau single-player tren map Co Loa:
+
+- Giu nguyen map `coloa_map_stage03_unity_colored` lam nen chinh.
+- Them player Anh Thu voi movement, dash, light attack va heavy attack.
+- Spawn Hac Tinh theo wave tu cac spawn point quanh khu chien dau.
+- Hien thanh mau player va thanh mau tung Hac Tinh.
+- Sau moi wave, hien 3 Blessings de nguoi choi tao build rieng.
+- Co 20 BlessingDefinition cho 5 hero types: Trung Trac, Trung Nhi, Quang Trung, An Duong Vuong, Thanh Giong.
+
+### Menu builder
+
+- `Tools > Dong Chay Anh Hung > Rebuild S03 Co Loa Combat Map`
+- `Tools > Dong Chay Anh Hung > Verify S03 Co Loa Combat Map`
+
+Builder se tao root `S03_CoLoaCombatIntegration`, player, camera, HUD, `S03_BlessingManager`, `S03_ArenaDirector`, invisible combat floor/boundary va 8 spawn point tren map Co Loa.
+
+`S03CoLoaAutoBuildOnOpen` se tu dong chay builder mot lan khi Unity mo project neu `Assets/Scenes/S03.unity` chua co lop combat S03 day du.
+
 ## Scripts chinh
 
 ### Runtime
@@ -133,6 +155,9 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 - `Assets/Scripts/Scene/S02CaveEventController.cs`
 - `Assets/Scripts/Scene/S02CutsceneController.cs`
 - `Assets/Scripts/Scene/S02TimeRiftTrigger.cs`
+- `Assets/Scripts/Scene/S03ArenaDirector.cs`
+- `Assets/Scripts/Blessing/BlessingManager.cs`
+- `Assets/Scripts/Blessing/BlessingRuntimeController.cs`
 - `Assets/Scripts/Scene/EscapeDoorQTE.cs`
 - `Assets/Scripts/Player/SlowZone.cs`
 
@@ -141,6 +166,8 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 - `Assets/Scripts/Editor/S01CityEscapeBuilder.cs`
 - `Assets/Scripts/Editor/S01ChaseSetupBuilder.cs`
 - `Assets/Scripts/Editor/S02CaveBuilder.cs`
+- `Assets/Scripts/Editor/S03CoLoaCombatArenaBuilder.cs`
+- `Assets/Scripts/Editor/S03CoLoaAutoBuildOnOpen.cs`
 - `Assets/Scripts/Editor/PlayerVisualBuilder.cs`
 
 ## Cach test nhanh
@@ -159,6 +186,14 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 2. Chay `Tools > Dong Chay Anh Hung > Rebuild S02 Underground Cave`.
 3. Bam Play.
 4. Test flow: intro -> ancient signs -> voices -> Hac Tinh descent -> TimeRift resonance -> 30s stabilization -> ending cutscene.
+
+### Test S03
+
+1. Mo scene `Assets/Scenes/S03.unity`.
+2. Chay `Tools > Dong Chay Anh Hung > Rebuild S03 Co Loa Combat Map`.
+3. Chay `Tools > Dong Chay Anh Hung > Verify S03 Co Loa Combat Map`.
+4. Bam Play.
+5. Test flow: spawn tren map Co Loa -> Hac Tinh wave -> giet het wave -> chon Blessing -> wave tiep theo -> game over/victory state.
 
 ## Ghi chu hien tai
 

@@ -36,7 +36,6 @@ public class PlayerController3D : MonoBehaviour
     private int dashCharges = 1;
     private float dashRechargeTimer;
     private const int MaxDashCharges = 1;
-    private const float DashRechargeTime = 0.4f;
 
     // Buffer and Lock features
     private bool dashBuffered;
@@ -54,6 +53,7 @@ public class PlayerController3D : MonoBehaviour
 
     public bool IsDashing => isDashing;
     public int DashCharges => dashCharges;
+    private float DashRechargeTime => Mathf.Max(0.08f, dashCooldown);
     public float DashRechargeProgress => dashCharges >= MaxDashCharges ? 1f : (dashRechargeTimer / DashRechargeTime);
 
     private void Awake()
@@ -151,6 +151,10 @@ public class PlayerController3D : MonoBehaviour
 
     public void StartDash()
     {
+        PlayerCombat3D combat = GetComponent<PlayerCombat3D>();
+        if (combat != null && combat.IsHeavyAttackActive)
+            return;
+
         isDashing = true;
         dashTimeRemaining = dashDuration;
         lastDashTime = Time.time;
@@ -158,7 +162,6 @@ public class PlayerController3D : MonoBehaviour
         dashRechargeTimer = 0f;
 
         // Cancel active light attack if applicable
-        PlayerCombat3D combat = GetComponent<PlayerCombat3D>();
         if (combat != null && combat.CanCancelCurrentAttack())
         {
             combat.CancelAttack();
@@ -236,6 +239,13 @@ public class PlayerController3D : MonoBehaviour
         {
             Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Ignore Raycast"), enemyLayer, false);
         }
+    }
+
+    public void RestoreDashCharge()
+    {
+        dashCharges = MaxDashCharges;
+        dashRechargeTimer = 0f;
+        dashBuffered = false;
     }
 
     private Vector3 GetSafeDashMovement(Vector3 desiredMove)
