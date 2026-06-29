@@ -322,7 +322,7 @@ public sealed class BlessingRuntimeController : MonoBehaviour
         killEnergyProgress = 0;
 
         // Khởi Nghĩa Mê Linh: hồi Dash + máu
-        if (playerController != null) playerController.RestoreDashCharge();
+        // if (playerController != null) playerController.RestoreDashCharge(); // Tạm tắt do bản player này không có method này
         if (playerHealth     != null) playerHealth.Heal(2 + energyStack * 2);
 
         SpawnPulse(killPosition + Vector3.up * 0.7f, leadershipColor, 1.4f, 0.45f, "Blessing_KhoiNghiaMeLinh");
