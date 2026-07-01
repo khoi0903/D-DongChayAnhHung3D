@@ -12,6 +12,10 @@ public class PlayerHealth3D : MonoBehaviour
     public float damageSlowDuration = 0.5f;
     public float damageSlowMultiplier = 0.45f;
 
+    public float DamageReduction { get; set; }
+    public int ReviveCharges { get; private set; }
+    public int ShieldPoints { get; private set; }
+
     private PlayerController3D playerController;
     private PlayerCombat3D playerCombat;
     private PlayerAnimatorDriver animatorDriver;
@@ -51,7 +55,15 @@ public class PlayerHealth3D : MonoBehaviour
             return;
         }
 
-        currentHP -= damage;
+        int remainingDamage = Mathf.Max(0, Mathf.RoundToInt(damage * (1f - Mathf.Clamp(DamageReduction, 0f, 0.8f))));
+        if (ShieldPoints > 0)
+        {
+            int absorbed = Mathf.Min(ShieldPoints, remainingDamage);
+            ShieldPoints -= absorbed;
+            remainingDamage -= absorbed;
+        }
+
+        currentHP -= remainingDamage;
 
         if (currentHP < 0)
             currentHP = 0;
@@ -75,6 +87,14 @@ public class PlayerHealth3D : MonoBehaviour
     {
         if (isDead)
             return;
+
+        if (ReviveCharges > 0)
+        {
+            ReviveCharges--;
+            currentHP = Mathf.Max(1, Mathf.RoundToInt(maxHP * 0.5f));
+            Debug.Log("PlayerHealth3D: Nữ Vương đã hồi sinh người chơi.");
+            return;
+        }
 
         isDead = true;
         Time.timeScale = 1f;
@@ -115,6 +135,23 @@ public class PlayerHealth3D : MonoBehaviour
             gameOverUI.SetActive(true);
             ConfigureGameOverUI();
         }
+    }
+
+    public void AddShield(int amount)
+    {
+        ShieldPoints = Mathf.Max(0, ShieldPoints + amount);
+    }
+
+    public void GrantReviveCharges(int amount)
+    {
+        ReviveCharges = Mathf.Max(0, ReviveCharges + amount);
+    }
+
+    public void Heal(int amount)
+    {
+        if (isDead)
+            return;
+        currentHP = Mathf.Clamp(currentHP + Mathf.Max(0, amount), 0, maxHP);
     }
 
     private void CancelSceneTransitions()
