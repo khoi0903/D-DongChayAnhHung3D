@@ -14,6 +14,7 @@ public sealed class S03ArenaDirector : MonoBehaviour
     [SerializeField] private BlessingRuntimeController blessingRuntime;
     [SerializeField] private TMP_Text waveText;
     [SerializeField] private TMP_Text statusText;
+    [SerializeField] private S03DefenseObjective defenseObjective;
 
     [Header("Wave Tuning")]
     [SerializeField] private int firstWaveEnemyCount = 3;
@@ -39,6 +40,12 @@ public sealed class S03ArenaDirector : MonoBehaviour
     private void Start()
     {
         ResolveReferences();
+        if (defenseObjective != null)
+        {
+            defenseObjective.Configure(statusText, null);
+            defenseObjective.ResetObjective();
+        }
+
         flowRoutine = StartCoroutine(ArenaFlow());
     }
 
@@ -89,26 +96,30 @@ public sealed class S03ArenaDirector : MonoBehaviour
     private IEnumerator ArenaFlow()
     {
         running = true;
-        SetStatus("San dau da san sang. Tieu diet toan bo Hac Tinh.");
+        SetWaveText("Defend Co Loa");
+        SetStatus(FormatStatus("Enemies have breached the lower levels. Hold the last defense line."));
         yield return new WaitForSeconds(timeBeforeFirstWave);
 
         while (running)
         {
-            if (IsPlayerDead())
+            if (TryFailForPlayerDeath() || IsDefenseFailed())
                 yield break;
 
             if (maxWaves > 0 && waveIndex >= maxWaves)
             {
-                SetStatus("Hoan thanh toan bo wave S03. Build cua ban da thanh hinh.");
+                CompleteMission();
                 yield break;
             }
 
             waveIndex++;
             yield return StartCoroutine(RunWave(waveIndex));
-            if (IsPlayerDead())
+            if (TryFailForPlayerDeath() || IsDefenseFailed())
                 yield break;
 
             yield return StartCoroutine(OpenBlessingChoice());
+            if (TryFailForPlayerDeath() || IsDefenseFailed())
+                yield break;
+
             yield return new WaitForSeconds(timeBetweenWaves);
         }
     }
@@ -116,12 +127,13 @@ public sealed class S03ArenaDirector : MonoBehaviour
     private IEnumerator RunWave(int currentWave)
     {
         activeEnemies.Clear();
+        defenseObjective?.ClearTrackedEnemies();
         blessingRuntime?.OnWaveStarted(currentWave);
 
         float awarenessDelay = blessingRuntime != null ? blessingRuntime.GetAwarenessSpawnDelay() : 0f;
         if (awarenessDelay > 0f)
         {
-            SetStatus("Canh Gioi: dot Hac Tinh tiep theo dang ap sat...");
+            SetStatus(FormatStatus("Canh Gioi: Hac Tinh are advancing from the lower levels..."));
             yield return new WaitForSeconds(awarenessDelay);
         }
 
@@ -130,28 +142,35 @@ public sealed class S03ArenaDirector : MonoBehaviour
             1,
             Mathf.Max(1, maxEnemiesPerWave));
 
-        SetWaveText("Wave " + currentWave);
-        SetStatus("Wave " + currentWave + ": ha " + enemyCount + " ke dich.");
+        SetWaveText("Defense Wave " + currentWave);
+        SetStatus(FormatStatus("Defense Wave " + currentWave + ": stop " + enemyCount + " Hac Tinh before they reach civilians."));
 
         for (int i = 0; i < enemyCount; i++)
         {
             MinionHealth3D enemy = SpawnEnemy(currentWave, i);
             if (enemy != null)
+            {
                 activeEnemies.Add(enemy);
+                defenseObjective?.RegisterEnemy(enemy);
+            }
 
             yield return new WaitForSeconds(0.18f);
         }
 
         while (!IsWaveCleared())
         {
-            if (IsPlayerDead())
+            if (TryFailForPlayerDeath() || IsDefenseFailed())
                 yield break;
 
-            SetStatus("Con lai: " + CountAliveEnemies() + " Hac Tinh.");
+            defenseObjective?.CheckForBreaches();
+            if (IsDefenseFailed())
+                yield break;
+
+            SetStatus(FormatStatus("Remaining enemies: " + CountAliveEnemies() + ". Protect the upper civilian levels."));
             yield return new WaitForSeconds(0.35f);
         }
 
-        SetStatus("Wave " + currentWave + " da sach. Chuan bi nhan Chuc Phuc Anh Linh.");
+        SetStatus(FormatStatus("Defense Wave " + currentWave + " cleared. Choose 1 of 3 An Linh blessings."));
         yield return new WaitForSeconds(0.55f);
     }
 
@@ -170,7 +189,7 @@ public sealed class S03ArenaDirector : MonoBehaviour
 
         Time.timeScale = 1f;
         Time.fixedDeltaTime = oldFixedDeltaTime > 0f ? oldFixedDeltaTime : 0.02f;
-        SetStatus("Chuc phuc da ap dung. Dot tiep theo sap bat dau.");
+        SetStatus(FormatStatus("An Linh blessing applied. The next assault is forming."));
     }
 
     private MinionHealth3D SpawnEnemy(int currentWave, int spawnIndex)
@@ -266,6 +285,35 @@ public sealed class S03ArenaDirector : MonoBehaviour
         return health != null && health.isDead;
     }
 
+    private bool TryFailForPlayerDeath()
+    {
+        if (!IsPlayerDead())
+            return false;
+
+        running = false;
+        defenseObjective?.MarkFailed("The defender has fallen. Co Loa cannot hold.");
+        return true;
+    }
+
+    private bool IsDefenseFailed()
+    {
+        if (defenseObjective == null || !defenseObjective.HasFailed)
+            return false;
+
+        running = false;
+        return true;
+    }
+
+    private void CompleteMission()
+    {
+        running = false;
+        SetWaveText("Defense Complete");
+        if (defenseObjective != null)
+            defenseObjective.MarkSucceeded("Co Loa holds. The upper levels are safe.");
+        else
+            SetStatus("Co Loa holds. The upper levels are safe.");
+    }
+
     private void ResolveReferences()
     {
         if (player == null)
@@ -280,6 +328,9 @@ public sealed class S03ArenaDirector : MonoBehaviour
 
         if (blessingManager == null)
             blessingManager = FindAnyObjectByType<BlessingManager>();
+
+        if (defenseObjective == null)
+            defenseObjective = FindAnyObjectByType<S03DefenseObjective>();
     }
 
     private void SetWaveText(string message)
@@ -292,6 +343,11 @@ public sealed class S03ArenaDirector : MonoBehaviour
     {
         if (statusText != null)
             statusText.text = message;
+    }
+
+    private string FormatStatus(string message)
+    {
+        return defenseObjective != null ? defenseObjective.FormatStatus(message) : message;
     }
 
     private void EnsureEnemyHealthBar(GameObject enemy, MinionHealth3D health)
