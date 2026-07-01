@@ -55,6 +55,30 @@ public sealed class S03ArenaDirector : MonoBehaviour
         statusText = statusLabel;
     }
 
+    public void ConfigureWaveTuning(
+        int firstWaveCount,
+        int addedPerWave,
+        int maxPerWave,
+        int waveLimit,
+        float radius,
+        float firstWaveDelay,
+        float betweenWaveDelay,
+        float healthPerWave,
+        int enemyDamage,
+        float damagePerWave)
+    {
+        firstWaveEnemyCount = Mathf.Max(1, firstWaveCount);
+        enemiesAddedPerWave = Mathf.Max(0, addedPerWave);
+        maxEnemiesPerWave = Mathf.Max(firstWaveEnemyCount, maxPerWave);
+        maxWaves = Mathf.Max(0, waveLimit);
+        arenaRadius = Mathf.Max(6f, radius);
+        timeBeforeFirstWave = Mathf.Max(0f, firstWaveDelay);
+        timeBetweenWaves = Mathf.Max(0f, betweenWaveDelay);
+        enemyHealthPerWave = Mathf.Max(0f, healthPerWave);
+        baseEnemyDamage = Mathf.Max(1, enemyDamage);
+        enemyDamagePerWave = Mathf.Max(0f, damagePerWave);
+    }
+
     private IEnumerator ArenaFlow()
     {
         running = true;

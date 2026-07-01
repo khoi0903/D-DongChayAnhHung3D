@@ -1,13 +1,17 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public sealed class BlessingChoiceUI : MonoBehaviour
+public sealed class BlessingChoiceUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
 {
     [SerializeField] private Button button;
     [SerializeField] private Image frame;
+    [SerializeField] private Image cardBody;
+    [SerializeField] private Image glow;
     [SerializeField] private Image icon;
+    [SerializeField] private Image rarityGem;
     [SerializeField] private TMP_Text heroText;
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text descriptionText;
@@ -16,6 +20,10 @@ public sealed class BlessingChoiceUI : MonoBehaviour
 
     private BlessingDefinition definition;
     private Action<BlessingDefinition> onSelected;
+    private Action<BlessingDefinition> onPreviewRequested;
+    private Action onPreviewCleared;
+    private Vector3 baseScale = Vector3.one;
+    private bool highlighted;
 
     public void ConfigureReferences(
         Button choiceButton,
@@ -27,9 +35,39 @@ public sealed class BlessingChoiceUI : MonoBehaviour
         TMP_Text choiceRarity,
         TMP_Text choiceStack)
     {
+        ConfigureReferences(
+            choiceButton,
+            choiceFrame,
+            null,
+            null,
+            choiceIcon,
+            null,
+            choiceHero,
+            choiceName,
+            choiceDescription,
+            choiceRarity,
+            choiceStack);
+    }
+
+    public void ConfigureReferences(
+        Button choiceButton,
+        Image choiceFrame,
+        Image choiceBody,
+        Image choiceGlow,
+        Image choiceIcon,
+        Image choiceRarityGem,
+        TMP_Text choiceHero,
+        TMP_Text choiceName,
+        TMP_Text choiceDescription,
+        TMP_Text choiceRarity,
+        TMP_Text choiceStack)
+    {
         button = choiceButton;
         frame = choiceFrame;
+        cardBody = choiceBody;
+        glow = choiceGlow;
         icon = choiceIcon;
+        rarityGem = choiceRarityGem;
         heroText = choiceHero;
         nameText = choiceName;
         descriptionText = choiceDescription;
@@ -37,16 +75,43 @@ public sealed class BlessingChoiceUI : MonoBehaviour
         stackText = choiceStack;
     }
 
+    public void SetPreviewCallbacks(Action<BlessingDefinition> previewCallback, Action clearCallback)
+    {
+        onPreviewRequested = previewCallback;
+        onPreviewCleared = clearCallback;
+    }
+
+    private void Awake()
+    {
+        baseScale = transform.localScale;
+    }
+
+    private void Update()
+    {
+        Vector3 targetScale = highlighted && definition != null ? baseScale * 1.045f : baseScale;
+        transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.unscaledDeltaTime * 12f);
+
+        if (glow != null)
+        {
+            Color color = glow.color;
+            float targetAlpha = highlighted && definition != null ? 0.42f : 0.08f;
+            color.a = Mathf.Lerp(color.a, targetAlpha, Time.unscaledDeltaTime * 12f);
+            glow.color = color;
+        }
+    }
+
     public void Bind(BlessingDefinition blessing, int ownedStack, Action<BlessingDefinition> selectionCallback)
     {
         definition = blessing;
         onSelected = selectionCallback;
+        highlighted = false;
 
         if (button != null)
         {
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(Select);
             button.interactable = blessing != null;
+            button.transition = Selectable.Transition.None;
         }
 
         if (blessing == null)
@@ -60,7 +125,18 @@ public sealed class BlessingChoiceUI : MonoBehaviour
         Color rarityColor = GetRarityColor(blessing.Rarity);
 
         if (frame != null)
-            frame.color = Color.Lerp(heroColor, rarityColor, 0.42f);
+            frame.color = Color.Lerp(new Color(0.06f, 0.045f, 0.035f, 0.98f), rarityColor, 0.35f);
+
+        if (cardBody != null)
+            cardBody.color = Color.Lerp(new Color(0.025f, 0.026f, 0.03f, 0.94f), heroColor, 0.16f);
+
+        if (glow != null)
+        {
+            glow.color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.08f);
+        }
+
+        if (rarityGem != null)
+            rarityGem.color = rarityColor;
 
         if (icon != null)
         {
@@ -96,6 +172,7 @@ public sealed class BlessingChoiceUI : MonoBehaviour
         if (definition == null)
             return;
 
+        onPreviewRequested?.Invoke(definition);
         if (button != null)
             button.interactable = false;
         onSelected?.Invoke(definition);
@@ -105,6 +182,36 @@ public sealed class BlessingChoiceUI : MonoBehaviour
     {
         if (button != null)
             button.interactable = interactable && definition != null;
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        Preview();
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        highlighted = false;
+        onPreviewCleared?.Invoke();
+    }
+
+    public void OnSelect(BaseEventData eventData)
+    {
+        Preview();
+    }
+
+    public void OnDeselect(BaseEventData eventData)
+    {
+        highlighted = false;
+    }
+
+    private void Preview()
+    {
+        if (definition == null)
+            return;
+
+        highlighted = true;
+        onPreviewRequested?.Invoke(definition);
     }
 
     private void ApplySafeDisplayText(BlessingDefinition blessing, int ownedStack)
@@ -145,10 +252,10 @@ public sealed class BlessingChoiceUI : MonoBehaviour
     {
         switch (rarity)
         {
-            case BlessingRarity.Common: return "TH\u01af\u1edcNG";
-            case BlessingRarity.Rare: return "HI\u1ebeM";
-            case BlessingRarity.Epic: return "S\u1eec THI";
-            case BlessingRarity.Legendary: return "HUY\u1ec0N THO\u1ea0I";
+            case BlessingRarity.Common: return "COMMON";
+            case BlessingRarity.Rare: return "RARE";
+            case BlessingRarity.Epic: return "EPIC";
+            case BlessingRarity.Legendary: return "LEGENDARY";
             default: return rarity.ToString().ToUpperInvariant();
         }
     }

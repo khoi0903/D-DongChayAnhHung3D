@@ -156,8 +156,8 @@ Cutscene duoc gan tu `S02CaveBuilder` va co fallback tu runtime neu scene cu chu
 
 S03 hien la arena single player lay cam hung tu flow chon suc manh sau moi round:
 
-- Player xuat hien trong graybox arena Co Loa.
-- Moi wave spawn Hac Tinh tu cac diem quanh dau truong.
+- Player xuat hien tren map Co Loa that duoc lay tu nhanh PhongHT.
+- Moi wave spawn Hac Tinh tu 8 diem spawn preset cua PhongHT quanh khu chien dau.
 - Player di chuyen bang WASD, danh thuong bang Mouse0, heavy attack bang Mouse1, Dash bang Shift.
 - Khi ha het quai trong wave, combat tam dung.
 - UI hien 3 Blessing ngau nhien.
@@ -169,12 +169,14 @@ S03 hien la arena single player lay cam hung tu flow chon suc manh sau moi round
 Combat S03 khong nam trong mot thu muc `Combat` rieng. No dang duoc chia theo vai tro de de quan ly:
 
 - Scene combat: `Assets/Scenes/S03.unity`
+- Map Cổ Loa S03 từ nhánh PhongHT: `Assets/Models/CoLoa/coloa_map_stage03_unity_colored.glb`
 - Player di chuyen, dash, light/heavy attack, mau va death: `Assets/Scripts/Player`
 - Quai Hac Tinh, chase, damage va HP quai: `Assets/Scripts/Minion`
 - Dieu phoi wave, spawn quai, tam dung combat va mo Blessing UI: `Assets/Scripts/Scene/S03ArenaDirector.cs`
 - UI mau Player, mau quai, dash: `Assets/Scripts/UI`
 - Blessing Anh Linh, random 3 lua chon, cong don buff: `Assets/Scripts/Blessing`
 - Du lieu Blessing S03 dang luu o: `Assets/Blessings/S03`
+- Material runtime cho map Cổ Loa: `Assets/Models/CoLoa/Materials_RuntimeFixed`
 - Tool dung de rebuild lai toan bo arena S03: `Assets/Scripts/Editor/S03SinglePlayerArenaBuilder.cs`
 
 Neu muon sua gameplay chinh cua S03, thu tu nen xem la:
@@ -202,6 +204,17 @@ Ultimate Blessing tu dong mo khi nguoi choi co du 3 Blessing khac nhau cua cung 
 - `Hai Ba Khoi Nghia`
 - `Voi Chien`
 - `Xuan Ky Dau`
+
+### Blessing Choice UI
+
+Sau khi clear wave, S03 hien man hinh `CHON BLESSING`:
+
+- Hien 3 card Blessing ngau nhien.
+- Card co ten, rarity `COMMON/RARE/EPIC/LEGENDARY`, icon placeholder, mo ta, stack va ten Anh Hung.
+- Hover/chon card se doi nen theo nhanh Anh Hung va hien thong tin chi tiet.
+- Nen hero dung Sprite trong `Assets/Blessings/S03/Backgrounds`.
+- Co nut `LAM MOI (1)` de roll lai 3 card mot lan moi luot chon.
+- Co nut `BO QUA` de quay lai gameplay ma khong nhan Blessing.
 
 ### Menu builder
 

@@ -12,10 +12,33 @@ public static class S03SinglePlayerArenaBuilder
     private const string RootName = "S03_SinglePlayerArena_Generated";
     private const string ScenePath = "Assets/Scenes/S03.unity";
     private const string BlessingFolder = "Assets/Blessings/S03";
+    private const string BlessingBackgroundFolder = BlessingFolder + "/Backgrounds";
+    private const string AnDuongVuongBackdropPath = BlessingBackgroundFolder + "/An_Duong_Vuong.png";
+    private const string TrungTracBackdropPath = BlessingBackgroundFolder + "/Trung_Trac.png";
+    private const string TrungNhiBackdropPath = BlessingBackgroundFolder + "/Trung_Nhi.png";
+    private const string QuangTrungBackdropPath = BlessingBackgroundFolder + "/Quang_Trung.png";
+    private const string CoLoaMapAssetPath = "Assets/Models/CoLoa/coloa_map_stage03_unity_colored.glb";
+    private const string CoLoaMapObjectName = "coloa_map_stage03_unity_colored";
     private const string MinionPrefabPath = "Assets/Prefabs/Minion.prefab";
     private const string PlayerModelPath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@Model.fbx";
     private const string PlayerAnimatorControllerPath = "Assets/Animations/Player/AnhThu.controller";
     private const string PlayerMaterialPath = "Assets/Models/Player/Materials/AnhThu_Player_Color.mat";
+    private const float PhongHTArenaRadius = 72f;
+    private static readonly Vector3 PhongHTIntegrationRoot = new Vector3(35.33f, 12.56f, 106.12f);
+    private static readonly Vector3 PhongHTCombatCenter = new Vector3(103.41223f, 0.08f, 37.55899f);
+    private static readonly Vector3 PhongHTCombatFloorScale = new Vector3(140f, 0.24f, 190f);
+    private static readonly Vector3 PhongHTPlayerSpawn = new Vector3(35.33f, 12.984f, 106.955f);
+    private static readonly Vector3[] PhongHTEnemySpawns =
+    {
+        new Vector3(35.55f, 12.56f, 106.12f),
+        new Vector3(35.33f, 12.56f, 106.12f),
+        new Vector3(35.55f, 12.56f, 106.12f),
+        new Vector3(35.55f, 12.56f, 106.12f),
+        new Vector3(35.55f, 12.56f, 106.12f),
+        new Vector3(35.55f, 12.56f, 106.12f),
+        new Vector3(35.55f, 12.56f, 106.59f),
+        new Vector3(35.55f, 12.56f, 106.59f),
+    };
 
     [MenuItem("Tools/Dong Chay Anh Hung/Rebuild S03 Combat Arena")]
     public static void BuildScene()
@@ -23,21 +46,37 @@ public static class S03SinglePlayerArenaBuilder
         OpenS03Scene();
         DeleteOldGeneratedObjects();
         List<BlessingDefinition> blessings = CreateBlessingAssets();
+        ConfigureHeroBackdropImportSettings();
+        Sprite anDuongVuongBackdrop = LoadHeroBackdrop(AnDuongVuongBackdropPath);
+        Sprite trungTracBackdrop = LoadHeroBackdrop(TrungTracBackdropPath);
+        Sprite trungNhiBackdrop = LoadHeroBackdrop(TrungNhiBackdropPath);
+        Sprite quangTrungBackdrop = LoadHeroBackdrop(QuangTrungBackdropPath);
+        EnsureCoLoaMap();
 
         GameObject root = new GameObject(RootName);
-        Material floorMat = CreateMaterial("S03_Arena_Floor_Mat", new Color32(84, 88, 96, 255), 0.25f);
-        Material wallMat = CreateMaterial("S03_Arena_Wall_Mat", new Color32(62, 66, 74, 255), 0.18f);
-        Material accentMat = CreateMaterial("S03_Arena_Bronze_Mat", new Color32(184, 122, 40, 255), 0.35f);
-        Material blueMat = CreateMaterial("S03_Arena_BlueGlow_Mat", new Color32(40, 180, 255, 255), 0.55f, new Color(0.05f, 0.7f, 1.3f));
-        Material redMat = CreateMaterial("S03_Arena_RedGlow_Mat", new Color32(210, 48, 60, 255), 0.55f, new Color(1.2f, 0.08f, 0.08f));
-
-        BuildArena(root, floorMat, wallMat, accentMat, blueMat, redMat, out Transform[] spawnPoints);
+        root.transform.position = PhongHTIntegrationRoot;
+        CombatLayout layout = BuildArena(root);
         SetupLighting();
 
-        Camera mainCamera = SetupCamera();
-        Transform player = SetupPlayer(mainCamera);
+        Camera mainCamera = SetupCamera(layout);
+        Transform player = SetupPlayer(mainCamera, layout.PlayerSpawn);
         Canvas canvas = EnsureCanvas();
-        BuildHud(canvas, out TMP_Text waveText, out TMP_Text statusText, out GameObject choiceRoot, out BlessingChoiceUI[] choiceCards, out TMP_Text choiceTitle, out TMP_Text choiceResult);
+        BuildHud(
+            canvas,
+            out TMP_Text waveText,
+            out TMP_Text statusText,
+            out GameObject choiceRoot,
+            out BlessingChoiceUI[] choiceCards,
+            out TMP_Text choiceTitle,
+            out TMP_Text choiceSubtitle,
+            out TMP_Text choiceResult,
+            out Image blessingBackdrop,
+            out TMP_Text blessingHeroName,
+            out TMP_Text blessingHeroLore,
+            out Button rerollButton,
+            out TMP_Text rerollButtonText,
+            out Button skipButton,
+            out TMP_Text skipButtonText);
         CreatePlayerHealthBar(canvas.transform, player.GetComponent<PlayerHealth3D>());
 
         BlessingRuntimeController runtime = player.GetComponent<BlessingRuntimeController>();
@@ -52,7 +91,25 @@ public static class S03SinglePlayerArenaBuilder
         GameObject managerObject = new GameObject("S03_BlessingManager");
         managerObject.transform.SetParent(root.transform, false);
         BlessingManager blessingManager = managerObject.AddComponent<BlessingManager>();
-        blessingManager.Configure(blessings, runtime, choiceRoot, choiceCards, choiceTitle, choiceResult);
+        blessingManager.Configure(
+            blessings,
+            runtime,
+            choiceRoot,
+            choiceCards,
+            choiceTitle,
+            choiceSubtitle,
+            choiceResult,
+            blessingBackdrop,
+            blessingHeroName,
+            blessingHeroLore,
+            rerollButton,
+            rerollButtonText,
+            skipButton,
+            skipButtonText,
+            anDuongVuongBackdrop,
+            trungTracBackdrop,
+            trungNhiBackdrop,
+            quangTrungBackdrop);
 
         GameObject directorObject = new GameObject("S03_ArenaDirector");
         directorObject.transform.SetParent(root.transform, false);
@@ -60,11 +117,12 @@ public static class S03SinglePlayerArenaBuilder
         director.Configure(
             player,
             AssetDatabase.LoadAssetAtPath<GameObject>(MinionPrefabPath),
-            spawnPoints,
+            layout.SpawnPoints,
             blessingManager,
             runtime,
             waveText,
             statusText);
+        director.ConfigureWaveTuning(3, 1, 12, 0, layout.Radius, 1.2f, 1.15f, 8f, 12, 0f);
 
         Selection.activeGameObject = root;
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
@@ -75,11 +133,23 @@ public static class S03SinglePlayerArenaBuilder
     public static void VerifyScene()
     {
         OpenS03Scene();
+        ConfigureHeroBackdropImportSettings();
 
         RequireSceneObject(RootName);
         RequireSceneObject("S03_BlessingManager");
         RequireSceneObject("S03_ArenaDirector");
         RequireSceneObject("S03_BlessingChoiceRoot");
+        RequireSceneObject("S03_BlessingChoiceSubtitle");
+        RequireSceneObject("S03_BlessingHeroName");
+        RequireSceneObject("S03_BlessingHeroLore");
+        RequireSceneObject("S03_BlessingRerollButton");
+        RequireSceneObject("S03_BlessingSkipButton");
+        RequireSceneObject(CoLoaMapObjectName);
+        RequireAsset<GameObject>(CoLoaMapAssetPath);
+        RequireAsset<Sprite>(AnDuongVuongBackdropPath);
+        RequireAsset<Sprite>(TrungTracBackdropPath);
+        RequireAsset<Sprite>(TrungNhiBackdropPath);
+        RequireAsset<Sprite>(QuangTrungBackdropPath);
 
         GameObject player = GameObject.Find("Player");
         if (player == null)
@@ -118,47 +188,63 @@ public static class S03SinglePlayerArenaBuilder
         EditorSceneManager.OpenScene(ScenePath);
     }
 
-    private static void BuildArena(GameObject root, Material floorMat, Material wallMat, Material accentMat, Material blueMat, Material redMat, out Transform[] spawnPoints)
+    private static GameObject EnsureCoLoaMap()
     {
-        CreateCube(root, "Arena_Floor", new Vector3(0f, -0.15f, 0f), Vector3.zero, new Vector3(46f, 0.3f, 46f), floorMat);
-        CreateCube(root, "Arena_NorthWall", new Vector3(0f, 1.5f, 23f), Vector3.zero, new Vector3(48f, 3f, 1.2f), wallMat);
-        CreateCube(root, "Arena_SouthWall", new Vector3(0f, 1.5f, -23f), Vector3.zero, new Vector3(48f, 3f, 1.2f), wallMat);
-        CreateCube(root, "Arena_EastWall", new Vector3(23f, 1.5f, 0f), Vector3.zero, new Vector3(1.2f, 3f, 48f), wallMat);
-        CreateCube(root, "Arena_WestWall", new Vector3(-23f, 1.5f, 0f), Vector3.zero, new Vector3(1.2f, 3f, 48f), wallMat);
+        GameObject map = FindSceneObject(CoLoaMapObjectName);
+        if (map != null)
+            return map;
 
-        GameObject centerSeal = CreatePrimitive(root, "CoLoa_Arena_CenterSeal", PrimitiveType.Cylinder, new Vector3(0f, 0.03f, 0f), Vector3.zero, new Vector3(9f, 0.06f, 9f), accentMat);
-        RemoveCollider(centerSeal);
+        GameObject mapAsset = AssetDatabase.LoadAssetAtPath<GameObject>(CoLoaMapAssetPath);
+        if (mapAsset == null)
+            throw new UnityException("S03 builder could not find Co Loa map asset: " + CoLoaMapAssetPath);
 
-        for (int i = 0; i < 12; i++)
-        {
-            float angle = i * 30f;
-            float radius = i % 2 == 0 ? 13.5f : 17.5f;
-            Vector3 position = new Vector3(Mathf.Sin(angle * Mathf.Deg2Rad) * radius, 0.24f, Mathf.Cos(angle * Mathf.Deg2Rad) * radius);
-            GameObject marker = CreateCube(root, "Arena_PathRune_" + i.ToString("00"), position, new Vector3(0f, angle, 0f), new Vector3(0.35f, 0.08f, 2.1f), i % 2 == 0 ? blueMat : accentMat);
-            RemoveCollider(marker);
-        }
+        map = PrefabUtility.InstantiatePrefab(mapAsset) as GameObject;
+        if (map == null)
+            map = Object.Instantiate(mapAsset);
 
-        CreateCube(root, "Arena_Cover_Block_A", new Vector3(-10f, 0.6f, 7f), new Vector3(0f, 25f, 0f), new Vector3(4.2f, 1.2f, 1.4f), wallMat);
-        CreateCube(root, "Arena_Cover_Block_B", new Vector3(9f, 0.6f, -8f), new Vector3(0f, -20f, 0f), new Vector3(4.2f, 1.2f, 1.4f), wallMat);
-        CreateCube(root, "Arena_Cover_Block_C", new Vector3(0f, 0.55f, 13.5f), new Vector3(0f, 90f, 0f), new Vector3(3.6f, 1.1f, 1.1f), wallMat);
-        CreateCube(root, "Arena_Cover_Block_D", new Vector3(0f, 0.55f, -13.5f), new Vector3(0f, 90f, 0f), new Vector3(3.6f, 1.1f, 1.1f), wallMat);
+        map.name = CoLoaMapObjectName;
+        map.transform.position = Vector3.zero;
+        map.transform.rotation = Quaternion.identity;
+        map.transform.localScale = Vector3.one;
+        return map;
+    }
 
-        spawnPoints = new Transform[8];
+    private static CombatLayout BuildArena(GameObject root)
+    {
+        float radius = PhongHTArenaRadius;
+        Vector3 center = PhongHTCombatCenter;
+
+        // Hidden gameplay support only. The visible graybox arena was removed so the Co Loa map owns the scene.
+        CreateInvisibleColliderCube(root, "S03_CoLoa_CombatFloor", center + new Vector3(0f, -0.12f, 0f), PhongHTCombatFloorScale);
+
+        Transform[] spawnPoints = new Transform[8];
         for (int i = 0; i < spawnPoints.Length; i++)
         {
-            float angle = i * 45f;
-            Vector3 position = new Vector3(Mathf.Sin(angle * Mathf.Deg2Rad) * 18f, 0.35f, Mathf.Cos(angle * Mathf.Deg2Rad) * 18f);
+            Vector3 position = PhongHTEnemySpawns[i];
             GameObject point = new GameObject("S03_EnemySpawn_" + (i + 1).ToString("00"));
             point.transform.SetParent(root.transform, false);
             point.transform.localPosition = position;
             spawnPoints[i] = point.transform;
-
-            GameObject visual = CreatePrimitive(root, "S03_EnemySpawnMarker_" + (i + 1).ToString("00"), PrimitiveType.Cylinder, position, Vector3.zero, new Vector3(1.1f, 0.05f, 1.1f), redMat);
-            RemoveCollider(visual);
         }
+
+        return new CombatLayout
+        {
+            Center = PhongHTPlayerSpawn,
+            Radius = radius,
+            PlayerSpawn = PhongHTPlayerSpawn,
+            SpawnPoints = spawnPoints
+        };
     }
 
-    private static Transform SetupPlayer(Camera mainCamera)
+    private static void CreateInvisibleColliderCube(GameObject root, string name, Vector3 position, Vector3 scale)
+    {
+        GameObject obj = CreateCube(root, name, position, Vector3.zero, scale, null);
+        MeshRenderer renderer = obj.GetComponent<MeshRenderer>();
+        if (renderer != null)
+            renderer.enabled = false;
+    }
+
+    private static Transform SetupPlayer(Camera mainCamera, Vector3 spawnPosition)
     {
         GameObject player = GameObject.Find("Player");
         if (player == null)
@@ -178,7 +264,7 @@ public static class S03SinglePlayerArenaBuilder
 
         bool wasEnabled = characterController.enabled;
         characterController.enabled = false;
-        player.transform.position = new Vector3(0f, 1.05f, 0f);
+        player.transform.position = spawnPosition;
         player.transform.rotation = Quaternion.identity;
         characterController.height = Mathf.Max(characterController.height, 1.8f);
         characterController.radius = Mathf.Max(characterController.radius, 0.32f);
@@ -385,7 +471,7 @@ public static class S03SinglePlayerArenaBuilder
             Object.DestroyImmediate(capsuleCollider);
     }
 
-    private static Camera SetupCamera()
+    private static Camera SetupCamera(CombatLayout layout)
     {
         Camera mainCamera = Camera.main;
         if (mainCamera == null)
@@ -401,12 +487,13 @@ public static class S03SinglePlayerArenaBuilder
             TrySetTag(cameraObject, "MainCamera");
         }
 
-        mainCamera.transform.position = new Vector3(-8.4f, 5.9f, -8.4f);
-        mainCamera.transform.rotation = Quaternion.Euler(42f, 45f, 0f);
-        mainCamera.fieldOfView = 46f;
+        float distance = Mathf.Clamp(layout.Radius * 0.58f, 12f, 28f);
+        mainCamera.transform.position = layout.Center + new Vector3(-distance, distance * 0.72f, -distance);
+        mainCamera.transform.rotation = Quaternion.Euler(46f, 45f, 0f);
+        mainCamera.fieldOfView = 48f;
         mainCamera.orthographic = false;
         mainCamera.nearClipPlane = 0.1f;
-        mainCamera.farClipPlane = 180f;
+        mainCamera.farClipPlane = Mathf.Max(180f, layout.Radius * 8f);
         return mainCamera;
     }
 
@@ -431,7 +518,22 @@ public static class S03SinglePlayerArenaBuilder
         directional.transform.rotation = Quaternion.Euler(54f, -38f, 0f);
     }
 
-    private static void BuildHud(Canvas canvas, out TMP_Text waveText, out TMP_Text statusText, out GameObject choiceRoot, out BlessingChoiceUI[] choiceCards, out TMP_Text choiceTitle, out TMP_Text choiceResult)
+    private static void BuildHud(
+        Canvas canvas,
+        out TMP_Text waveText,
+        out TMP_Text statusText,
+        out GameObject choiceRoot,
+        out BlessingChoiceUI[] choiceCards,
+        out TMP_Text choiceTitle,
+        out TMP_Text choiceSubtitle,
+        out TMP_Text choiceResult,
+        out Image blessingBackdrop,
+        out TMP_Text blessingHeroName,
+        out TMP_Text blessingHeroLore,
+        out Button rerollButton,
+        out TMP_Text rerollButtonText,
+        out Button skipButton,
+        out TMP_Text skipButtonText)
     {
         waveText = CreateText(canvas.transform, "S03_WaveText", new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(520f, 52f), 34, TextAlignmentOptions.Center);
         waveText.text = "S03 ARENA";
@@ -450,19 +552,68 @@ public static class S03SinglePlayerArenaBuilder
         rootRect.offsetMin = Vector2.zero;
         rootRect.offsetMax = Vector2.zero;
 
-        Image backdrop = choiceRoot.AddComponent<Image>();
-        backdrop.color = new Color(0.02f, 0.025f, 0.035f, 0.86f);
+        blessingBackdrop = choiceRoot.AddComponent<Image>();
+        blessingBackdrop.color = new Color(0.04f, 0.26f, 0.30f, 0.92f);
 
-        choiceTitle = CreateText(choiceRoot.transform, "S03_BlessingChoiceTitle", new Vector2(0.5f, 0.78f), Vector2.zero, new Vector2(900f, 72f), 42, TextAlignmentOptions.Center);
-        choiceTitle.text = "CHON CHUC PHUC ANH LINH";
+        Image darkVeil = CreatePanelImage(choiceRoot.transform, "S03_BlessingDarkVeil", new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.015f, 0.012f, 0.014f, 0.64f));
+        RectTransform darkVeilRect = darkVeil.GetComponent<RectTransform>();
+        darkVeilRect.anchorMin = Vector2.zero;
+        darkVeilRect.anchorMax = Vector2.one;
+        darkVeilRect.offsetMin = Vector2.zero;
+        darkVeilRect.offsetMax = Vector2.zero;
 
-        choiceResult = CreateText(choiceRoot.transform, "S03_BlessingChoiceResult", new Vector2(0.5f, 0.22f), Vector2.zero, new Vector2(1100f, 80f), 24, TextAlignmentOptions.Center);
+        Image warmHorizon = CreatePanelImage(choiceRoot.transform, "S03_BlessingWarmHorizon", new Vector2(0.5f, 0.53f), Vector2.zero, new Vector2(1900f, 620f), new Color(0.75f, 0.34f, 0.06f, 0.19f));
+        warmHorizon.raycastTarget = false;
+
+        Image heroInfoPanel = CreatePanelImage(choiceRoot.transform, "S03_BlessingHeroInfoPanel", new Vector2(0f, 1f), new Vector2(300f, -185f), new Vector2(560f, 142f), new Color(0.02f, 0.014f, 0.012f, 0.58f));
+        heroInfoPanel.raycastTarget = false;
+        Outline heroInfoOutline = heroInfoPanel.gameObject.AddComponent<Outline>();
+        heroInfoOutline.effectColor = new Color(0.95f, 0.55f, 0.16f, 0.34f);
+        heroInfoOutline.effectDistance = new Vector2(2f, -2f);
+
+        blessingHeroName = CreateText(choiceRoot.transform, "S03_BlessingHeroName", new Vector2(0f, 1f), new Vector2(300f, -142f), new Vector2(500f, 42f), 26, TextAlignmentOptions.Left);
+        blessingHeroName.text = "AN DUONG VUONG";
+        blessingHeroName.color = new Color(1f, 0.76f, 0.28f, 1f);
+
+        blessingHeroLore = CreateText(choiceRoot.transform, "S03_BlessingHeroLore", new Vector2(0f, 1f), new Vector2(300f, -202f), new Vector2(500f, 78f), 20, TextAlignmentOptions.Left);
+        blessingHeroLore.text = "Nen thanh Co Loa, rong vang, troi chieu u nghi.";
+        blessingHeroLore.color = new Color(0.96f, 0.88f, 0.68f, 0.96f);
+
+        TMP_Text resourceText = CreateText(choiceRoot.transform, "S03_BlessingResourceText", new Vector2(0.91f, 0.94f), Vector2.zero, new Vector2(330f, 42f), 24, TextAlignmentOptions.Right);
+        resourceText.text = "<color=#B77CFF>◆ 120</color>    <color=#E2A83D>◎ 2.500</color>";
+
+        resourceText.text = "<color=#B77CFF>TINH THACH 120</color>    <color=#E2A83D>VANG 2.500</color>";
+
+        choiceTitle = CreateText(choiceRoot.transform, "S03_BlessingChoiceTitle", new Vector2(0.5f, 0.88f), Vector2.zero, new Vector2(900f, 78f), 55, TextAlignmentOptions.Center);
+        choiceTitle.text = "CHỌN BLESSING";
+        choiceTitle.text = "CH\u1eccN BLESSING";
+        choiceTitle.color = new Color(0.98f, 0.86f, 0.62f, 1f);
+        choiceTitle.fontStyle = FontStyles.Bold;
+
+        choiceSubtitle = CreateText(choiceRoot.transform, "S03_BlessingChoiceSubtitle", new Vector2(0.5f, 0.815f), Vector2.zero, new Vector2(900f, 44f), 25, TextAlignmentOptions.Center);
+        choiceSubtitle.text = "Chọn một sức mạnh để tiếp tục hành trình";
+        choiceSubtitle.text = "Ch\u1ecdn m\u1ed9t s\u1ee9c m\u1ea1nh \u0111\u1ec3 ti\u1ebfp t\u1ee5c h\u00e0nh tr\u00ecnh";
+        choiceSubtitle.color = new Color(0.92f, 0.84f, 0.7f, 0.95f);
+
+        choiceResult = CreateText(choiceRoot.transform, "S03_BlessingChoiceResult", new Vector2(0.5f, 0.17f), Vector2.zero, new Vector2(1180f, 92f), 23, TextAlignmentOptions.Center);
         choiceResult.text = string.Empty;
+        choiceResult.color = new Color(0.96f, 0.9f, 0.78f, 0.95f);
 
         choiceCards = new BlessingChoiceUI[3];
         float[] xOffsets = { -390f, 0f, 390f };
         for (int i = 0; i < choiceCards.Length; i++)
             choiceCards[i] = CreateBlessingCard(choiceRoot.transform, i, xOffsets[i]);
+
+        rerollButton = CreateBlessingActionButton(choiceRoot.transform, "S03_BlessingRerollButton", "LÀM MỚI (1)", new Vector2(0.5f, 0.085f), new Vector2(-185f, 0f), out rerollButtonText);
+        skipButton = CreateBlessingActionButton(choiceRoot.transform, "S03_BlessingSkipButton", "BỎ QUA", new Vector2(0.5f, 0.085f), new Vector2(185f, 0f), out skipButtonText);
+
+        rerollButtonText.text = "L\u00c0M M\u1edaI (1)";
+        skipButtonText.text = "B\u1ece QUA";
+
+        TMP_Text hint = CreateText(choiceRoot.transform, "S03_BlessingHintText", new Vector2(0.5f, 0.035f), Vector2.zero, new Vector2(1200f, 36f), 19, TextAlignmentOptions.Center);
+        hint.text = "Giữ Alt hoặc rê chuột qua card để xem chi tiết. Reroll chỉ dùng 1 lần mỗi lựa chọn.";
+        hint.text = "Gi\u1eef Alt ho\u1eb7c r\u00ea chu\u1ed9t qua card \u0111\u1ec3 xem chi ti\u1ebft. Reroll ch\u1ec9 d\u00f9ng 1 l\u1ea7n m\u1ed7i l\u1ef1a ch\u1ecdn.";
+        hint.color = new Color(0.86f, 0.76f, 0.56f, 0.88f);
 
         choiceRoot.SetActive(false);
     }
@@ -543,24 +694,81 @@ public static class S03SinglePlayerArenaBuilder
         rect.anchorMin = new Vector2(0.5f, 0.5f);
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = new Vector2(xOffset, 0f);
-        rect.sizeDelta = new Vector2(330f, 430f);
+        rect.anchoredPosition = new Vector2(xOffset, -4f);
+        rect.sizeDelta = new Vector2(315f, 455f);
 
         Image frame = card.AddComponent<Image>();
-        frame.color = new Color(0.12f, 0.14f, 0.18f, 0.96f);
+        frame.color = new Color(0.45f, 0.31f, 0.11f, 0.95f);
+        Outline outline = card.AddComponent<Outline>();
+        outline.effectColor = new Color(1f, 0.68f, 0.22f, 0.55f);
+        outline.effectDistance = new Vector2(2f, -2f);
+
         Button button = card.AddComponent<Button>();
         button.targetGraphic = frame;
+        button.transition = Selectable.Transition.None;
 
-        Image icon = CreatePanelImage(card.transform, "Icon", new Vector2(0.5f, 0.78f), new Vector2(0f, 0f), new Vector2(96f, 96f), new Color(1f, 1f, 1f, 0.2f));
-        TMP_Text hero = CreateText(card.transform, "Hero", new Vector2(0.5f, 0.62f), Vector2.zero, new Vector2(290f, 38f), 18, TextAlignmentOptions.Center);
-        TMP_Text name = CreateText(card.transform, "Name", new Vector2(0.5f, 0.52f), Vector2.zero, new Vector2(290f, 62f), 26, TextAlignmentOptions.Center);
-        TMP_Text description = CreateText(card.transform, "Description", new Vector2(0.5f, 0.34f), Vector2.zero, new Vector2(280f, 116f), 20, TextAlignmentOptions.Center);
-        TMP_Text rarity = CreateText(card.transform, "Rarity", new Vector2(0.5f, 0.16f), Vector2.zero, new Vector2(280f, 36f), 20, TextAlignmentOptions.Center);
-        TMP_Text stack = CreateText(card.transform, "Stack", new Vector2(0.5f, 0.08f), Vector2.zero, new Vector2(280f, 32f), 18, TextAlignmentOptions.Center);
+        Image glow = CreatePanelImage(card.transform, "Glow", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(333f, 473f), new Color(1f, 0.62f, 0.08f, 0.08f));
+        Image body = CreatePanelImage(card.transform, "Body", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(288f, 426f), new Color(0.025f, 0.028f, 0.034f, 0.96f));
+        Image topRule = CreatePanelImage(card.transform, "TopRule", new Vector2(0.5f, 0.91f), Vector2.zero, new Vector2(245f, 3f), new Color(0.86f, 0.56f, 0.17f, 0.82f));
+        Image bottomRule = CreatePanelImage(card.transform, "BottomRule", new Vector2(0.5f, 0.17f), Vector2.zero, new Vector2(245f, 3f), new Color(0.86f, 0.56f, 0.17f, 0.82f));
+
+        Image rarityGem = CreatePanelImage(card.transform, "RarityGem", new Vector2(0.5f, 0.965f), Vector2.zero, new Vector2(18f, 18f), new Color(0.18f, 0.58f, 1f, 1f));
+        rarityGem.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+
+        TMP_Text name = CreateText(card.transform, "Name", new Vector2(0.5f, 0.855f), Vector2.zero, new Vector2(270f, 56f), 25, TextAlignmentOptions.Center);
+        name.fontStyle = FontStyles.Bold;
+        name.color = new Color(0.96f, 0.84f, 0.62f, 1f);
+
+        TMP_Text rarity = CreateText(card.transform, "Rarity", new Vector2(0.5f, 0.79f), Vector2.zero, new Vector2(240f, 30f), 18, TextAlignmentOptions.Center);
+        rarity.fontStyle = FontStyles.Bold;
+
+        Image iconBack = CreatePanelImage(card.transform, "IconBack", new Vector2(0.5f, 0.61f), Vector2.zero, new Vector2(150f, 150f), new Color(0.05f, 0.035f, 0.025f, 0.92f));
+        Image icon = CreatePanelImage(card.transform, "Icon", new Vector2(0.5f, 0.61f), Vector2.zero, new Vector2(106f, 106f), new Color(1f, 1f, 1f, 0.22f));
+
+        TMP_Text description = CreateText(card.transform, "Description", new Vector2(0.5f, 0.37f), Vector2.zero, new Vector2(255f, 118f), 20, TextAlignmentOptions.Center);
+        description.color = new Color(0.92f, 0.84f, 0.68f, 0.96f);
+
+        TMP_Text stack = CreateText(card.transform, "Stack", new Vector2(0.5f, 0.225f), Vector2.zero, new Vector2(250f, 30f), 17, TextAlignmentOptions.Center);
+        stack.color = new Color(0.74f, 0.92f, 1f, 0.95f);
+
+        TMP_Text hero = CreateText(card.transform, "Hero", new Vector2(0.5f, 0.08f), Vector2.zero, new Vector2(260f, 34f), 18, TextAlignmentOptions.Center);
+        hero.color = new Color(0.98f, 0.72f, 0.28f, 0.95f);
+        hero.fontStyle = FontStyles.Bold;
+
+        topRule.raycastTarget = false;
+        bottomRule.raycastTarget = false;
+        iconBack.raycastTarget = false;
 
         BlessingChoiceUI cardUI = card.AddComponent<BlessingChoiceUI>();
-        cardUI.ConfigureReferences(button, frame, icon, hero, name, description, rarity, stack);
+        cardUI.ConfigureReferences(button, frame, body, glow, icon, rarityGem, hero, name, description, rarity, stack);
         return cardUI;
+    }
+
+    private static Button CreateBlessingActionButton(Transform parent, string name, string label, Vector2 anchor, Vector2 position, out TMP_Text labelText)
+    {
+        GameObject buttonObject = new GameObject(name);
+        buttonObject.transform.SetParent(parent, false);
+        RectTransform rect = buttonObject.AddComponent<RectTransform>();
+        rect.anchorMin = anchor;
+        rect.anchorMax = anchor;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = new Vector2(265f, 58f);
+
+        Image frame = buttonObject.AddComponent<Image>();
+        frame.color = new Color(0.22f, 0.105f, 0.045f, 0.92f);
+        Outline outline = buttonObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.92f, 0.58f, 0.18f, 0.72f);
+        outline.effectDistance = new Vector2(2f, -2f);
+
+        Button button = buttonObject.AddComponent<Button>();
+        button.targetGraphic = frame;
+
+        labelText = CreateText(buttonObject.transform, name + "_Label", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(240f, 36f), 22, TextAlignmentOptions.Center);
+        labelText.text = label;
+        labelText.fontStyle = FontStyles.Bold;
+        labelText.color = new Color(0.96f, 0.8f, 0.48f, 1f);
+        return button;
     }
 
     private static Image CreatePanelImage(Transform parent, string name, Vector2 anchor, Vector2 anchoredPosition, Vector2 size, Color color)
@@ -599,10 +807,71 @@ public static class S03SinglePlayerArenaBuilder
         return text;
     }
 
+    private static void ConfigureHeroBackdropImportSettings()
+    {
+        AssetDatabase.Refresh();
+        ConfigureBackdropSpriteImport(AnDuongVuongBackdropPath);
+        ConfigureBackdropSpriteImport(TrungTracBackdropPath);
+        ConfigureBackdropSpriteImport(TrungNhiBackdropPath);
+        ConfigureBackdropSpriteImport(QuangTrungBackdropPath);
+    }
+
+    private static void ConfigureBackdropSpriteImport(string assetPath)
+    {
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer == null)
+        {
+            Debug.LogWarning("S03 missing Blessing backdrop image: " + assetPath);
+            return;
+        }
+
+        bool changed = false;
+        if (importer.textureType != TextureImporterType.Sprite)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            changed = true;
+        }
+
+        if (importer.spriteImportMode != SpriteImportMode.Single)
+        {
+            importer.spriteImportMode = SpriteImportMode.Single;
+            changed = true;
+        }
+
+        if (importer.mipmapEnabled)
+        {
+            importer.mipmapEnabled = false;
+            changed = true;
+        }
+
+        if (importer.maxTextureSize < 2048)
+        {
+            importer.maxTextureSize = 2048;
+            changed = true;
+        }
+
+        if (changed)
+            importer.SaveAndReimport();
+    }
+
+    private static Sprite LoadHeroBackdrop(string assetPath)
+    {
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        if (sprite == null)
+            Debug.LogWarning("S03 could not load Blessing backdrop sprite: " + assetPath);
+        return sprite;
+    }
+
     private static void RequireSceneObject(string objectName)
     {
         if (FindSceneObject(objectName) == null)
             throw new UnityException("S03 verify failed: missing scene object " + objectName + ".");
+    }
+
+    private static void RequireAsset<T>(string assetPath) where T : Object
+    {
+        if (AssetDatabase.LoadAssetAtPath<T>(assetPath) == null)
+            throw new UnityException("S03 verify failed: missing asset " + assetPath + ".");
     }
 
     private static GameObject FindSceneObject(string objectName)
@@ -753,40 +1022,12 @@ public static class S03SinglePlayerArenaBuilder
             Object.DestroyImmediate(collider);
     }
 
-    private static Material CreateMaterial(string name, Color color, float smoothness, Color? emission = null)
-    {
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null)
-            shader = Shader.Find("Standard");
-
-        Material material = new Material(shader)
-        {
-            name = name,
-            color = color
-        };
-
-        if (material.HasProperty("_BaseColor"))
-            material.SetColor("_BaseColor", color);
-        if (material.HasProperty("_Smoothness"))
-            material.SetFloat("_Smoothness", smoothness);
-        if (material.HasProperty("_Metallic"))
-            material.SetFloat("_Metallic", 0f);
-
-        if (emission.HasValue)
-        {
-            material.EnableKeyword("_EMISSION");
-            if (material.HasProperty("_EmissionColor"))
-                material.SetColor("_EmissionColor", emission.Value);
-        }
-
-        return material;
-    }
-
     private static void DeleteOldGeneratedObjects()
     {
         string[] names =
         {
             RootName,
+            "S03_CoLoaCombatIntegration",
             "S03_BlessingChoiceRoot",
             "S03_WaveText",
             "S03_StatusText",
@@ -800,6 +1041,9 @@ public static class S03SinglePlayerArenaBuilder
             DeleteAllSceneObjectsNamed(objectName);
 
         DeleteAllSceneObjectsWithPrefix("S03_Wave");
+        DeleteAllSceneObjectsNamed("S03_CoLoa_CombatSeal");
+        DeleteAllSceneObjectsWithPrefix("S03_CoLoa_Boundary_");
+        DeleteAllSceneObjectsWithPrefix("S03_CoLoa_PathRune_");
         DeleteAllSceneObjectsWithPrefix("S03_EnemySpawnMarker");
         DeleteAllSceneObjectsWithPrefix("S03_EnemySpawn_");
         DeleteAllSceneObjectsWithPrefix("vietnam_city_game_map");
@@ -850,5 +1094,13 @@ public static class S03SinglePlayerArenaBuilder
         {
             Debug.LogWarning("Tag not found: " + tagName + ". Please add it in Project Settings if needed.");
         }
+    }
+
+    private struct CombatLayout
+    {
+        public Vector3 Center;
+        public float Radius;
+        public Vector3 PlayerSpawn;
+        public Transform[] SpawnPoints;
     }
 }
