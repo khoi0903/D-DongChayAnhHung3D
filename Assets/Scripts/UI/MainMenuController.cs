@@ -12,7 +12,7 @@ using UnityEditor;
 public sealed class MainMenuController : MonoBehaviour
 {
     [Header("Scene Flow")]
-    [SerializeField] private string startSceneName = "S01_CityPrototype";
+    [SerializeField] private string startSceneName = "S03";
 
     [Header("Intro")]
     [SerializeField] private CanvasGroup blackFade;
@@ -42,6 +42,9 @@ public sealed class MainMenuController : MonoBehaviour
     [SerializeField] private bool playIntroDrum = true;
     [SerializeField, Range(0f, 1f)] private float introDrumVolume = 0.45f;
 
+    [Header("Intro Video")]
+    [SerializeField] private Intro.IntroVideoManager introVideoManager;
+
     private bool isTransitioning;
     private Vector2 swordStartPosition;
     private Vector2 swordEndPosition;
@@ -64,7 +67,8 @@ public sealed class MainMenuController : MonoBehaviour
         GameObject achievementsPanel,
         TMP_Text statusText,
         TMP_Text versionText,
-        string startSceneName)
+        string startSceneName,
+        Intro.IntroVideoManager introVideoManager = null)
     {
         this.blackFade = blackFade;
         this.logoGroup = logoGroup;
@@ -82,6 +86,7 @@ public sealed class MainMenuController : MonoBehaviour
         this.statusText = statusText;
         this.versionText = versionText;
         this.startSceneName = startSceneName;
+        this.introVideoManager = introVideoManager;
     }
 
     private void Awake()
@@ -136,6 +141,9 @@ public sealed class MainMenuController : MonoBehaviour
 
     private void Update()
     {
+        if (isTransitioning)
+            return;
+
         if (!Input.GetKeyDown(KeyCode.Escape))
             return;
 
@@ -159,7 +167,23 @@ public sealed class MainMenuController : MonoBehaviour
         if (isTransitioning)
             return;
 
-        StartCoroutine(LoadStartScene());
+        if (introVideoManager != null)
+        {
+            isTransitioning = true;
+            
+            Canvas mainCanvas = GetComponentInParent<Canvas>();
+            if (mainCanvas == null)
+                mainCanvas = FindAnyObjectByType<Canvas>();
+
+            if (mainCanvas != null)
+                mainCanvas.enabled = false;
+
+            introVideoManager.PlayIntro(startSceneName);
+        }
+        else
+        {
+            StartCoroutine(LoadStartScene());
+        }
     }
 
     public void OpenSettings()

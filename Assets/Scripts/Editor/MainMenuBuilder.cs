@@ -11,8 +11,8 @@ using UnityEngine.UI;
 public static class MainMenuBuilder
 {
     private const string ScenePath = "Assets/Scenes/MainMenu.unity";
-    private const string StartScenePath = "Assets/Scenes/S01_CityPrototype.unity";
-    private const string StartSceneName = "S01_CityPrototype";
+    private const string StartScenePath = "Assets/Scenes/S03.unity";
+    private const string StartSceneName = "S03";
     private const string RootName = "MainMenu_Generated";
     private const string MaterialFolder = "Assets/Materials/MainMenu";
 
@@ -53,6 +53,28 @@ public static class MainMenuBuilder
             out TMP_Text statusText,
             out TMP_Text versionText);
 
+        Intro.IntroVideoManager videoManager = null;
+        string prefabPath = "Assets/IntroVideo/Prefabs/IntroVideoPlayer.prefab";
+        GameObject videoPlayerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (videoPlayerPrefab != null)
+        {
+            GameObject videoPlayerInstance = PrefabUtility.InstantiatePrefab(videoPlayerPrefab) as GameObject;
+            videoPlayerInstance.transform.SetParent(root.transform, false);
+            videoManager = videoPlayerInstance.GetComponent<Intro.IntroVideoManager>();
+            if (videoManager != null)
+            {
+                List<UnityEngine.Video.VideoClip> clips = new List<UnityEngine.Video.VideoClip>();
+                UnityEngine.Video.VideoClip clip1 = AssetDatabase.LoadAssetAtPath<UnityEngine.Video.VideoClip>("Assets/IntroVideo/Videos/1.mp4");
+                UnityEngine.Video.VideoClip clip8 = AssetDatabase.LoadAssetAtPath<UnityEngine.Video.VideoClip>("Assets/IntroVideo/Videos/8.mp4");
+                if (clip1 != null) clips.Add(clip1);
+                if (clip8 != null) clips.Add(clip8);
+
+                videoManager.IntroClips = clips.ToArray();
+                videoManager.TargetSceneName = StartSceneName;
+                videoManager.PlayOnStart = false;
+            }
+        }
+
         GameObject controllerObject = new GameObject("MainMenu_Controller");
         controllerObject.transform.SetParent(root.transform, false);
         MainMenuController controller = controllerObject.AddComponent<MainMenuController>();
@@ -72,7 +94,8 @@ public static class MainMenuBuilder
             achievementsPanel,
             statusText,
             versionText,
-            StartSceneName);
+            StartSceneName,
+            videoManager);
 
         Selection.activeGameObject = root;
         EditorSceneManager.MarkSceneDirty(scene);
@@ -538,6 +561,7 @@ public static class MainMenuBuilder
         velocity.space = ParticleSystemSimulationSpace.Local;
         velocity.y = new ParticleSystem.MinMaxCurve(0.35f, 0.8f);
         velocity.x = new ParticleSystem.MinMaxCurve(-0.15f, 0.15f);
+        velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
         ParticleSystemRenderer renderer = embers.GetComponent<ParticleSystemRenderer>();
         renderer.sharedMaterial = emberMat;
@@ -549,9 +573,7 @@ public static class MainMenuBuilder
         string[] priorityScenes =
         {
             ScenePath,
-            StartScenePath,
-            "Assets/Scenes/S02_UndergroundCave.unity",
-            "Assets/Scenes/S03.unity"
+            StartScenePath
         };
 
         List<EditorBuildSettingsScene> finalScenes = new List<EditorBuildSettingsScene>();
