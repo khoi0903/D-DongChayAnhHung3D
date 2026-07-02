@@ -20,14 +20,17 @@ public static class S03SinglePlayerArenaBuilder
     private const string CoLoaMapAssetPath = "Assets/Models/CoLoa/coloa_map_stage03_unity_colored.glb";
     private const string CoLoaMapObjectName = "coloa_map_stage03_unity_colored";
     private const string MinionPrefabPath = "Assets/Prefabs/Minion.prefab";
-    private const string PlayerModelPath = "Assets/Models/Player/Action_Anh_Thu/Action_Anh_Thu/Anh_Thu@Model.fbx";
-    private const string PlayerAnimatorControllerPath = "Assets/Animations/Player/AnhThu.controller";
-    private const string PlayerMaterialPath = "Assets/Models/Player/Materials/AnhThu_Player_Color.mat";
+    private const string PlayerDisplayName = "Van An";
+    private const string PlayerModelPath = VanAnPlayerSetupBuilder.BaseModelPath;
+    private const string PlayerAnimatorControllerPath = VanAnPlayerSetupBuilder.ControllerPath;
+    private const string PlayerMaterialPath = VanAnPlayerSetupBuilder.MaterialPath;
+    private const string SwordVisualName = "VanAn_SwordVisual";
     private const float PhongHTArenaRadius = 72f;
-    private static readonly Vector3 PhongHTIntegrationRoot = new Vector3(35.33f, 12.56f, 106.12f);
-    private static readonly Vector3 PhongHTCombatCenter = new Vector3(103.41223f, 0.08f, 37.55899f);
+    private const float PhongHTGroundY = 12.56f;
+    private static readonly Vector3 PhongHTIntegrationRoot = Vector3.zero;
+    private static readonly Vector3 PhongHTCombatCenter = new Vector3(35.33f, PhongHTGroundY, 106.12f);
     private static readonly Vector3 PhongHTCombatFloorScale = new Vector3(140f, 0.24f, 190f);
-    private static readonly Vector3 PhongHTPlayerSpawn = new Vector3(35.33f, 12.984f, 106.955f);
+    private static readonly Vector3 PhongHTPlayerSpawn = new Vector3(35.33f, PhongHTGroundY + 0.08f, 106.955f);
     private static readonly Vector3[] PhongHTEnemySpawns =
     {
         new Vector3(35.55f, 12.56f, 106.12f),
@@ -47,6 +50,7 @@ public static class S03SinglePlayerArenaBuilder
         DeleteOldGeneratedObjects();
         List<BlessingDefinition> blessings = CreateBlessingAssets();
         ConfigureHeroBackdropImportSettings();
+        VanAnPlayerSetupBuilder.RebuildVanAnAnimatorController();
         Sprite anDuongVuongBackdrop = LoadHeroBackdrop(AnDuongVuongBackdropPath);
         Sprite trungTracBackdrop = LoadHeroBackdrop(TrungTracBackdropPath);
         Sprite trungNhiBackdrop = LoadHeroBackdrop(TrungNhiBackdropPath);
@@ -55,6 +59,8 @@ public static class S03SinglePlayerArenaBuilder
 
         GameObject root = new GameObject(RootName);
         root.transform.position = PhongHTIntegrationRoot;
+        root.transform.rotation = Quaternion.identity;
+        root.transform.localScale = Vector3.one;
         CombatLayout layout = BuildArena(root);
         SetupLighting();
 
@@ -135,7 +141,13 @@ public static class S03SinglePlayerArenaBuilder
         OpenS03Scene();
         ConfigureHeroBackdropImportSettings();
 
-        RequireSceneObject(RootName);
+        GameObject generatedRoot = FindSceneObject(RootName);
+        if (generatedRoot == null)
+            throw new UnityException("S03 verify failed: missing scene object " + RootName + ".");
+
+        if (generatedRoot.transform.position.sqrMagnitude > 0.0001f)
+            throw new UnityException("S03 verify failed: generated root must stay at world origin.");
+
         RequireSceneObject("S03_BlessingManager");
         RequireSceneObject("S03_ArenaDirector");
         RequireSceneObject("S03_BlessingChoiceRoot");
@@ -150,6 +162,11 @@ public static class S03SinglePlayerArenaBuilder
         RequireAsset<Sprite>(TrungTracBackdropPath);
         RequireAsset<Sprite>(TrungNhiBackdropPath);
         RequireAsset<Sprite>(QuangTrungBackdropPath);
+        RequireAsset<GameObject>(PlayerModelPath);
+        RequireAsset<RuntimeAnimatorController>(PlayerAnimatorControllerPath);
+        RequireAsset<Material>(PlayerMaterialPath);
+        RequireAsset<Material>(NoKimQuyWeaponAssetBuilder.SwordBladeMaterialPath);
+        RequireAsset<Material>(NoKimQuyWeaponAssetBuilder.SwordHiltMaterialPath);
 
         GameObject player = GameObject.Find("Player");
         if (player == null)
@@ -161,9 +178,17 @@ public static class S03SinglePlayerArenaBuilder
         RequireComponent<PlayerController3D>(player);
         RequireComponent<PlayerCombat3D>(player);
         RequireComponent<PlayerHealth3D>(player);
+        RequireComponent<PlayerFallGuard3D>(player);
         RequireComponent<BlessingRuntimeController>(player);
+        RequireComponent<PlayerWeaponSlot3D>(player);
         if (player.transform.Find("PlayerVisual") == null)
             throw new UnityException("S03 verify failed: PlayerVisual was not found on Player.");
+        RequirePlayerGrounding(player);
+        RequireChild(player.transform, "RightHandWeaponSocket");
+        RequireVanAnVisual(player);
+        Transform swordVisual = RequireChild(player.transform, SwordVisualName);
+        RequireComponent<WeaponVisualAnchor3D>(swordVisual.gameObject);
+        RequireNoPhysicsComponents(swordVisual, SwordVisualName);
         RequireSceneObject("S03_PlayerHealthRoot");
 
         if (Object.FindAnyObjectByType<S03ArenaDirector>() == null)
@@ -177,7 +202,7 @@ public static class S03SinglePlayerArenaBuilder
         if (blessingGuids.Length < 20)
             throw new UnityException("S03 verify failed: expected 20 BlessingDefinition assets, found " + blessingGuids.Length + ".");
 
-        Debug.Log("S03 verification passed: scene, player, arena director, UI, and 20 Blessing assets are present.");
+        Debug.Log("S03 verification passed: scene, player, weapon loadout, arena director, UI, and 20 Blessing assets are present.");
     }
 
     private static void OpenS03Scene()
@@ -266,9 +291,9 @@ public static class S03SinglePlayerArenaBuilder
         characterController.enabled = false;
         player.transform.position = spawnPosition;
         player.transform.rotation = Quaternion.identity;
-        characterController.height = Mathf.Max(characterController.height, 1.8f);
-        characterController.radius = Mathf.Max(characterController.radius, 0.32f);
-        characterController.center = new Vector3(0f, 0f, 0f);
+        characterController.height = 1.8f;
+        characterController.radius = 0.32f;
+        characterController.center = new Vector3(0f, characterController.height * 0.5f, 0f);
         characterController.enabled = wasEnabled;
 
         PlayerController3D controller = player.GetComponent<PlayerController3D>();
@@ -289,6 +314,12 @@ public static class S03SinglePlayerArenaBuilder
         health.maxHP = 100;
         health.currentHP = health.maxHP;
         health.isDead = false;
+
+        PlayerFallGuard3D fallGuard = player.GetComponent<PlayerFallGuard3D>();
+        if (fallGuard == null)
+            fallGuard = player.AddComponent<PlayerFallGuard3D>();
+
+        fallGuard.Configure(spawnPosition, PhongHTGroundY - 4f);
 
         PlayerCombat3D combat = player.GetComponent<PlayerCombat3D>();
         if (combat == null)
@@ -318,6 +349,7 @@ public static class S03SinglePlayerArenaBuilder
 
         runtime.Configure(controller, combat, health);
         SetupPlayerVisual(player);
+        VanAnWeaponLoadoutBuilder.SetupSwordOnPlayer(player);
 
         if (mainCamera != null)
         {
@@ -326,11 +358,11 @@ public static class S03SinglePlayerArenaBuilder
                 followCamera = mainCamera.gameObject.AddComponent<ThirdPersonCamera>();
 
             followCamera.target = player.transform;
-            followCamera.distance = 8.8f;
-            followCamera.height = 3.1f;
+            followCamera.distance = 5.8f;
+            followCamera.height = 2.7f;
             followCamera.fixedAngle = true;
             followCamera.fixedYaw = 45f;
-            followCamera.fixedPitch = 42f;
+            followCamera.fixedPitch = 36f;
             followCamera.lockCursor = false;
         }
 
@@ -633,7 +665,7 @@ public static class S03SinglePlayerArenaBuilder
         panel.color = new Color(0.035f, 0.025f, 0.028f, 0.82f);
 
         TMP_Text nameText = CreateText(root.transform, "S03_PlayerHealthName", new Vector2(0f, 1f), new Vector2(92f, -21f), new Vector2(180f, 26f), 22, TextAlignmentOptions.Left);
-        nameText.text = "Anh Thu";
+        nameText.text = PlayerDisplayName;
 
         TMP_Text valueText = CreateText(root.transform, "S03_PlayerHealthValue", new Vector2(1f, 1f), new Vector2(-78f, -21f), new Vector2(140f, 26f), 20, TextAlignmentOptions.Right);
         valueText.text = health != null ? health.currentHP + " / " + health.maxHP : "100 / 100";
@@ -898,6 +930,122 @@ public static class S03SinglePlayerArenaBuilder
     {
         if (obj.GetComponent<T>() == null)
             throw new UnityException("S03 verify failed: " + obj.name + " is missing " + typeof(T).Name + ".");
+    }
+
+    private static Transform RequireChild(Transform root, string childName)
+    {
+        Transform child = FindChildRecursive(root, childName);
+        if (child == null)
+            throw new UnityException("S03 verify failed: missing child object " + childName + ".");
+
+        return child;
+    }
+
+    private static void RequireNoPhysicsComponents(Transform root, string label)
+    {
+        if (root.GetComponentsInChildren<Rigidbody>(true).Length > 0 ||
+            root.GetComponentsInChildren<Rigidbody2D>(true).Length > 0)
+        {
+            throw new UnityException("S03 verify failed: " + label + " must not contain Rigidbody components.");
+        }
+
+        if (root.GetComponentsInChildren<Collider>(true).Length > 0 ||
+            root.GetComponentsInChildren<Collider2D>(true).Length > 0)
+        {
+            throw new UnityException("S03 verify failed: " + label + " must not contain Collider components.");
+        }
+    }
+
+    private static void RequirePlayerGrounding(GameObject player)
+    {
+        CharacterController controller = player.GetComponent<CharacterController>();
+        if (controller == null)
+            throw new UnityException("S03 verify failed: Player is missing CharacterController.");
+
+        float expectedCenterY = controller.height * 0.5f;
+        if (Mathf.Abs(controller.center.y - expectedCenterY) > 0.03f)
+            throw new UnityException("S03 verify failed: Player CharacterController center must keep Player transform at feet.");
+
+        GameObject floor = FindSceneObject("S03_CoLoa_CombatFloor");
+        if (floor == null)
+            throw new UnityException("S03 verify failed: S03_CoLoa_CombatFloor was not found.");
+
+        Collider floorCollider = floor.GetComponent<Collider>();
+        if (floorCollider == null)
+            throw new UnityException("S03 verify failed: S03_CoLoa_CombatFloor is missing a Collider.");
+
+        Physics.SyncTransforms();
+        Bounds bounds = CalculateColliderBounds(floorCollider);
+        Vector3 position = player.transform.position;
+        bool insideFloor =
+            position.x >= bounds.min.x &&
+            position.x <= bounds.max.x &&
+            position.z >= bounds.min.z &&
+            position.z <= bounds.max.z;
+
+        if (!insideFloor)
+            throw new UnityException(
+                "S03 verify failed: Player spawn is outside the combat floor collider. " +
+                "Player=" + position + ", FloorMin=" + bounds.min + ", FloorMax=" + bounds.max + ".");
+
+        if (Mathf.Abs(bounds.max.y - PhongHTGroundY) > 0.05f)
+            throw new UnityException("S03 verify failed: combat floor top is not aligned to the S03 ground height.");
+
+        if (position.y < PhongHTGroundY || position.y > PhongHTGroundY + 0.35f)
+            throw new UnityException("S03 verify failed: Player spawn Y is not on the combat floor.");
+    }
+
+    private static Bounds CalculateColliderBounds(Collider collider)
+    {
+        BoxCollider box = collider as BoxCollider;
+        if (box == null)
+            return collider.bounds;
+
+        Transform transform = box.transform;
+        Vector3 scale = transform.lossyScale;
+        Vector3 size = new Vector3(
+            Mathf.Abs(box.size.x * scale.x),
+            Mathf.Abs(box.size.y * scale.y),
+            Mathf.Abs(box.size.z * scale.z));
+
+        return new Bounds(transform.TransformPoint(box.center), size);
+    }
+
+    private static void RequireVanAnVisual(GameObject player)
+    {
+        Transform visual = player.transform.Find("PlayerVisual");
+        if (visual == null)
+            throw new UnityException("S03 verify failed: PlayerVisual was not found on Player.");
+
+        Animator animator = visual.GetComponent<Animator>();
+        if (animator == null)
+            throw new UnityException("S03 verify failed: Van An PlayerVisual is missing Animator.");
+
+        RuntimeAnimatorController expectedController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(PlayerAnimatorControllerPath);
+        if (expectedController != null && animator.runtimeAnimatorController != expectedController)
+            throw new UnityException("S03 verify failed: PlayerVisual is not using Van An Animator Controller.");
+
+        Avatar expectedAvatar = FindPlayerAvatar();
+        if (expectedAvatar != null && animator.avatar != expectedAvatar)
+            throw new UnityException("S03 verify failed: PlayerVisual is not using Van An Avatar.");
+    }
+
+    private static Transform FindChildRecursive(Transform root, string childName)
+    {
+        if (root == null || string.IsNullOrEmpty(childName))
+            return null;
+
+        foreach (Transform child in root)
+        {
+            if (child.name == childName)
+                return child;
+
+            Transform nested = FindChildRecursive(child, childName);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
     }
 
     private static Canvas EnsureCanvas()

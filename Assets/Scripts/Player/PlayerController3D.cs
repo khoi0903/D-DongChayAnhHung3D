@@ -248,6 +248,25 @@ public class PlayerController3D : MonoBehaviour
         dashBuffered = false;
     }
 
+    public void TeleportTo(Vector3 position)
+    {
+        if (controller == null)
+            controller = GetComponent<CharacterController>();
+
+        bool wasEnabled = controller == null || controller.enabled;
+        if (controller != null)
+            controller.enabled = false;
+
+        transform.position = position;
+        velocity = Vector3.zero;
+        isDashing = false;
+        dashTimeRemaining = 0f;
+        dashBuffered = false;
+
+        if (controller != null)
+            controller.enabled = wasEnabled;
+    }
+
     private Vector3 GetSafeDashMovement(Vector3 desiredMove)
     {
         float distance = desiredMove.magnitude;

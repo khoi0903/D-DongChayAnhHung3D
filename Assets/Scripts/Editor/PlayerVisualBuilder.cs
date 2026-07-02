@@ -8,11 +8,11 @@ public static class PlayerVisualBuilder
 {
     private const string VisualRootName = "PlayerVisual";
     private const string ImportedModelName = "ImportedModel";
-    private const string PlayerModelPath = "Assets/Models/Player/VanAn_Student.fbx";
-    private const string MaterialFolder = "Assets/Materials/GeneratedPlayerVisual";
-    private const string ColoredMaterialPath = MaterialFolder + "/VanAn_Student_Colored.mat";
-    private const string BaseColorTexturePath = "Assets/Models/Player/Textures/VanAn_BaseColor.png";
-    private const string NormalTexturePath = "Assets/Models/Player/Textures/VanAn_Normal.png";
+    private const string PlayerModelPath = VanAnPlayerSetupBuilder.BaseModelPath;
+    private const string MaterialFolder = "Assets/Models/Player/Materials";
+    private const string ColoredMaterialPath = VanAnPlayerSetupBuilder.MaterialPath;
+    private const string BaseColorTexturePath = "Assets/Models/Player/Van_An/texture_pbr_20250901.png";
+    private const string NormalTexturePath = "Assets/Models/Player/Van_An/texture_pbr_20250901_normal.png";
     private const float TargetVisualHeight = 1.75f;
     private const float GroundClearance = 0.02f;
 
@@ -421,7 +421,7 @@ public static class PlayerVisualBuilder
 
             material = new Material(shader)
             {
-                name = "VanAn_Student_Colored"
+                name = "VanAn_Player_Color"
             };
             AssetDatabase.CreateAsset(material, ColoredMaterialPath);
         }
